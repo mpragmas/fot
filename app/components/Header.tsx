@@ -15,9 +15,10 @@ const Header = () => {
           />
         </div>
       </div>
-      <div className="flex items-center gap-10">
+      <div className="flex items-center gap-3 lg:gap-10">
         <p className="hidden lg:block">News</p>
         <p className="hidden lg:block">About us</p>
+        <IoSearch className="text-lightest lg:hidden" />
         <IoMdSettings />
       </div>
     </header>
