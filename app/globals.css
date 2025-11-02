@@ -22,6 +22,8 @@
   --color-light-1: oklch(0.96 0 0);
   --color-light-2: rgb(245 245 245);
   --color-light-3: rgb(204 204 204);
+
+  --color-green: rgb(97 223 110);
 }
 @variant dark (.dark &);
 
