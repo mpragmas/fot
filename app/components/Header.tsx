@@ -4,6 +4,7 @@ import { IoMdSettings } from "react-icons/io";
 import { IoSearch } from "react-icons/io5";
 import { useEffect, useState } from "react";
 import { IoSunny, IoMoon } from "react-icons/io5";
+import Link from "next/link";
 
 const Header = () => {
   const [darkMode, setDarkMode] = useState(false);
@@ -34,7 +35,9 @@ const Header = () => {
   return (
     <header className="text-dark bg-whitish dark:bg-dark-1 dark:text-whitish flex items-center justify-between px-5 py-3 font-extrabold sm:px-15 lg:px-20 lg:py-4">
       <div className="flex items-center gap-20">
-        <h1 className="text-lg lg:text-2xl">FotMob</h1>
+        <Link href="/" className="text-lg lg:text-2xl">
+          FotMob
+        </Link>
         <div className="relative font-normal">
           <IoSearch className="text-dark-3 absolute top-2.5 left-3 text-xl" />
 
