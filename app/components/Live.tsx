@@ -20,15 +20,15 @@ const Live = () => {
           >
             <p className="bg-dark-4 inline rounded-full px-4 py-4"></p>
             <div className="flex gap-3">
-              <p className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2">
                 <p className="text-sm">APR FC</p>
                 <span className="bg-dark-4 inline rounded-full px-4 py-4"></span>
-              </p>
+              </div>
               <p className="self-center">0 - 0</p>
-              <p className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2">
                 <p className="text-sm">APR FC</p>
                 <span className="bg-dark-4 inline rounded-full px-4 py-4"></span>
-              </p>
+              </div>
             </div>
             <p className=""></p>
           </div>

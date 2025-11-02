@@ -12,7 +12,7 @@ const Matches = () => {
         "https://upload.wikimedia.org/wikipedia/en/e/eb/Manchester_City_FC_badge.svg",
       awayLogo:
         "https://upload.wikimedia.org/wikipedia/en/e/e5/AFC_Bournemouth_(2013).svg",
-      score: "3 - 1",
+      score: "5 - 2",
     },
     {
       homeTeam: "Sunderland",
