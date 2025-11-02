@@ -12,11 +12,18 @@
   --font-mono: var(--font-geist-mono);
 
   --color-whitish: #ffffff;
-  --color-light: rgb(26 26 26);
-  --color-lightest: #9f9f9f;
-  --color-light-dark: rgb(44 44 44);
   --color-dark: rgb(0 0 0);
+  --color-dark-0: rgb(51 51 51);
+  --color-dark-1: rgb(26 26 26);
+  --color-dark-2: rgb(44 44 44);
+  --color-dark-3: #9f9f9f;
+  --color-dark-4: rgb(74 74 74);
+
+  --color-light-1: oklch(0.96 0 0);
+  --color-light-2: rgb(245 245 245);
+  --color-light-3: rgb(204 204 204);
 }
+@variant dark (.dark &);
 
 @media (prefers-color-scheme: dark) {
   :root {
