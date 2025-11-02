@@ -2,7 +2,7 @@ import React from "react";
 
 const arr = [1, 2, 3, 4, 5];
 
-const League = () => {
+const TopLeague = () => {
   return (
     <div className="bg-whitish dark:text-whitish dark:bg-dark-1 inline-block w-[23%] grow-0 rounded-2xl">
       <h1 className="p-5">Top League</h1>
@@ -18,4 +18,4 @@ const League = () => {
   );
 };
 
-export default League;
+export default TopLeague;
