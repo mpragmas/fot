@@ -66,7 +66,7 @@ const teams = [
 
 const Table = () => {
   return (
-    <div className="dark:bg-dark-1 dark:text-whitish rounded-2xl p-5">
+    <div className="dark:bg-dark-1 dark:text-whitish mt-3 rounded-2xl p-5">
       <div className="mb-5 flex items-center gap-2">
         <button className="bg-whitish text-dark dark:bg-whitish dark:text-dark rounded-full px-4 py-1 text-sm font-medium">
           All

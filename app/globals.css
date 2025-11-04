@@ -26,6 +26,8 @@
 
   --color-green: rgb(97 223 110);
   --color-green-2: rgb(0 152 95);
+
+  --color-blue-1: rgb(118, 180, 229);
 }
 @variant dark (.dark &);
 

@@ -27,18 +27,18 @@ export default function TeamFormation({
   }
 
   return (
-    <div className="w-[480px] rounded-2xl bg-[#1a1a1a] p-4 text-white">
+    <div className="dark:bg-dark-1 dark:text-whitish rounded-2xl p-4">
       <h2 className="mb-2 text-center text-lg font-semibold">
         Team of the Week
       </h2>
       <p className="mb-4 text-center text-sm">Custom Formation</p>
 
-      <div className="relative flex h-[520px] w-full flex-col justify-between rounded-xl bg-[#222] py-4">
+      <div className="relative flex h-[520px] w-full flex-col justify-between rounded-xl py-4">
         {/* Render rows */}
         {rows.map((row, rowIndex) => (
           <div
             key={rowIndex}
-            className="flex justify-center gap-6"
+            className="flex justify-center gap-2"
             style={{ flex: 1 }}
           >
             {row.map((player, i) => (

@@ -17,7 +17,7 @@ const Player = ({
           alt={name}
           className="h-12 w-12 rounded-full border-2 border-gray-600"
         /> */}
-        <p className="h-12 w-12 rounded-full border-2 border-gray-600"></p>
+        <p className="h-10 w-10 rounded-full border-2 border-gray-600"></p>
         <span className="absolute -top-2 -right-2 rounded-full bg-green-500 px-1.5 py-0.5 text-xs font-semibold">
           {rating}
         </span>
