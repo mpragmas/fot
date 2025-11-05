@@ -33,13 +33,13 @@ const Header = () => {
   };
 
   return (
-    <header className="text-dark bg-whitish dark:bg-dark-1 dark:text-whitish flex items-center justify-between px-5 py-3 font-extrabold sm:px-15 lg:px-20 lg:py-4">
+    <header className="text-dark bg-whitish dark:bg-dark-1 dark:text-whitish flex items-center justify-between px-5 py-3 font-extrabold sm:px-15 lg:px-44 lg:py-4">
       <div className="flex items-center gap-20">
         <Link href="/" className="text-lg lg:text-2xl">
           FotMob
         </Link>
         <div className="relative font-normal">
-          <IoSearch className="text-dark-3 absolute top-2.5 left-3 text-xl" />
+          <IoSearch className="text-dark-3 absolute top-2.5 left-3 hidden text-xl lg:block" />
 
           <input
             placeholder="Search"

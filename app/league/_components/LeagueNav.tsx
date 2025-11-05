@@ -4,17 +4,14 @@ import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-const LeagueNav = ({ params }: { params: { id: string } }) => {
+const LeagueNav = ({
+  params,
+  status,
+}: {
+  params: { id: string };
+  status: { name: string; href: string }[];
+}) => {
   const pathname = usePathname();
-
-  const status = [
-    { name: "Overview", href: `/league/${params.id}` },
-    { name: "Table", href: `/league/${params.id}/table` },
-    { name: "Matches", href: `/league/${params.id}/matches` },
-    { name: "Stats", href: `/league/${params.id}/stats` },
-    { name: "Transfers", href: `/league/${params.id}/transfers` },
-    { name: "News", href: `/league/${params.id}/news` },
-  ];
 
   return (
     <div className="dark:text-dark-3 mt-10 flex items-center gap-10 text-sm font-bold">

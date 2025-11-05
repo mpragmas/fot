@@ -2,15 +2,21 @@ import React from "react";
 import { FaSortDown } from "react-icons/fa";
 import Image from "next/image";
 
-const LeagueHeader = () => {
+const LeagueHeader = ({
+  leagueName,
+  leagueCountry,
+}: {
+  leagueName: string;
+  leagueCountry: string;
+}) => {
   return (
     <div className="flex justify-between">
       <div className="flex gap-5">
         <Image src="/images/logo.png" alt="logo" width={50} height={50} />
 
         <div>
-          <h1 className="text-2xl font-bold">English Premier League</h1>
-          <p className="dark:text-dark-3 text-base">Rwanda</p>
+          <h1 className="text-2xl font-bold">{leagueName}</h1>
+          <p className="dark:text-dark-3 text-base">{leagueCountry}</p>
         </div>
       </div>
       <div className="relative inline-block">
