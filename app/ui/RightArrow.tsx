@@ -1,5 +1,5 @@
 import React from "react";
-import { FaAngleLeft, FaAngleRight } from "react-icons/fa";
+import { FaAngleRight } from "react-icons/fa";
 
 const RightArrow = ({ padding }: { padding?: string }) => {
   const paddingClass = padding ? `p-${padding}` : "p-2";

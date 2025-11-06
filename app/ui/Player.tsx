@@ -3,11 +3,11 @@ import React from "react";
 const Player = ({
   name,
   rating,
-  image,
+  //image,
 }: {
   name: string;
   rating: string;
-  image: string;
+  // image: string;
 }) => {
   return (
     <div className="flex flex-col items-center text-center">

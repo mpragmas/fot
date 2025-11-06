@@ -40,14 +40,15 @@ const StatCenterRow: React.FC<{ label: string; left: string; right: string }> = 
   </div>
 );
 
+const stats: Stats = {
+  possession: { home: 50, away: 50 },
+  corners: { home: 4, away: 7 },
+  shotsOnTarget: { home: 7, away: 2 },
+  fouls: { home: 10, away: 7 },
+  cards: { home: 2, away: 3 },
+};
+
 const MatchStats: React.FC = () => {
-  const stats: Stats = {
-    possession: { home: 50, away: 50 },
-    corners: { home: 4, away: 7 },
-    shotsOnTarget: { home: 7, away: 2 },
-    fouls: { home: 10, away: 7 },
-    cards: { home: 2, away: 3 },
-  };
 
   return (
     <div className="dark:bg-dark-1 dark:text-dark-3 mt-5 flex w-full justify-center p-4">

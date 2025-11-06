@@ -1,4 +1,5 @@
 import React from "react";
+import Image from "next/image";
 
 const TeamForm: React.FC = () => {
   const teamForm = [
@@ -43,7 +44,13 @@ const TeamForm: React.FC = () => {
             <div className={`rounded-md ${m.color} px-4 py-1 text-xs`}>
               {m.score}
             </div>
-            <img src={m.img} alt={m.alt} className="h-6 w-6" />
+            <Image
+              src={m.img}
+              alt={m.alt}
+              className="h-6 w-6"
+              width={24}
+              height={24}
+            />
           </div>
         ))}
       </div>

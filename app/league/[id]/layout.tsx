@@ -5,17 +5,18 @@ import LeagueNav from "@/app/league/_components/LeagueNav";
 
 interface LayoutProps {
   children: React.ReactNode;
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
-const LeagueLayout = ({ children, params }: LayoutProps) => {
+const LeagueLayout = async ({ children, params }: LayoutProps) => {
+  const { id } = await params;
   const status = [
-    { name: "Overview", href: `/league/${params.id}` },
-    { name: "Table", href: `/league/${params.id}/table` },
-    { name: "Matches", href: `/league/${params.id}/matches` },
-    { name: "Stats", href: `/league/${params.id}/stats` },
-    { name: "Transfers", href: `/league/${params.id}/transfers` },
-    { name: "News", href: `/league/${params.id}/news` },
+    { name: "Overview", href: `/league/${id}` },
+    { name: "Table", href: `/league/${id}/table` },
+    { name: "Matches", href: `/league/${id}/matches` },
+    { name: "Stats", href: `/league/${id}/stats` },
+    { name: "Transfers", href: `/league/${id}/transfers` },
+    { name: "News", href: `/league/${id}/news` },
   ];
   return (
     <Container>
@@ -24,7 +25,7 @@ const LeagueLayout = ({ children, params }: LayoutProps) => {
           leagueName="English Premier League"
           leagueCountry="Rwanda"
         />
-        <LeagueNav params={params} status={status} />
+        <LeagueNav params={{ id }} status={status} />
       </div>
       {children}
     </Container>

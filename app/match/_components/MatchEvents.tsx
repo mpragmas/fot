@@ -161,7 +161,9 @@ const MatchEvents: React.FC = () => {
 
         <div className="">
           {events.map((e, i) => (
-            <div key={i}>
+            <div
+              key={`${e.minute}-${e.type}-${e.side}-${e.player || ''}-${e.subIn || ''}-${e.subOut || ''}-${i}`}
+            >
               {e.note ? (
                 <div className="my-3 flex justify-center text-sm italic">
                   {e.note}

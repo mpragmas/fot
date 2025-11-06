@@ -1,4 +1,5 @@
 import React from "react";
+import Image from "next/image";
 
 interface PlayerStatCardProps {
   name: string;
@@ -22,10 +23,12 @@ const PlayerStatCard: React.FC<PlayerStatCardProps> = ({
       }`}
     >
       <div className="flex items-center gap-3">
-        <img
+        <Image
           src={teamLogo}
           alt={team}
-          className="h-8 w-8 rounded-full object-cover"
+          className="rounded-full object-cover"
+          width={32}
+          height={32}
         />
         <div className="flex flex-col">
           <span className="dark:text-whitish text-dark-1 text-sm font-semibold">

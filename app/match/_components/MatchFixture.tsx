@@ -104,7 +104,7 @@ const MatchFixture: React.FC = () => {
       </div>
       <div className="divide-dark-2 divide-y">
         {data.map((f, i) => (
-          <Row key={i} f={f} highlighted={i === 0} />
+          <Row key={`${f.home.short}-${f.away.short}-${f.hs}-${f.as}`} f={f} highlighted={i === 0} />
         ))}
       </div>
     </div>
