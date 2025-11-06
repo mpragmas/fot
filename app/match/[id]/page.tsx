@@ -1,7 +1,8 @@
 import React from "react";
+import MatchEvents from "../_components/MatchEvents";
 
 const page = () => {
-  return <div>page</div>;
+  return <MatchEvents />;
 };
 
 export default page;

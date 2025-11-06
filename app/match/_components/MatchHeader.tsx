@@ -4,7 +4,7 @@ import { FaRegCalendarAlt } from "react-icons/fa";
 import { GiWhistle } from "react-icons/gi";
 import { MdStadium } from "react-icons/md";
 
-const MatchCard = () => {
+const MatchHeader = () => {
   return (
     <div className="dark:text-whitish dark:bg-dark-1 w-full overflow-hidden rounded-2xl font-sans">
       {/* Header */}
@@ -114,4 +114,4 @@ const MatchCard = () => {
   );
 };
 
-export default MatchCard;
+export default MatchHeader;
