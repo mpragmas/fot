@@ -21,7 +21,7 @@ export default function TeamFormation({
   const outfield = players.slice(1);
   const rows = [];
   let index = 0;
-  for (let count of formation) {
+  for (const count of formation) {
     rows.push(outfield.slice(index, index + count));
     index += count;
   }

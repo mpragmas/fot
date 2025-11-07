@@ -1,5 +1,4 @@
 import MatchFixture from "@/app/components/MatchFixture";
-import MatchResults from "@/app/components/MatchResults";
 import LeftArrow from "@/app/ui/LeftArrow";
 import RightArrow from "@/app/ui/RightArrow";
 import React from "react";

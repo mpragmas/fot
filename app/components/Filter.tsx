@@ -1,8 +1,7 @@
 import React from "react";
-import { FaAngleLeft, FaSortDown } from "react-icons/fa";
+import { FaSortDown } from "react-icons/fa";
 import LeftArrow from "../ui/LeftArrow";
 import RightArrow from "../ui/RightArrow";
-import { IoSearch } from "react-icons/io5";
 import { MdFilterList } from "react-icons/md";
 
 const Filter = () => {

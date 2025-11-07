@@ -25,7 +25,7 @@ const LeagueLayout = async ({ children, params }: LayoutProps) => {
           leagueName="English Premier League"
           leagueCountry="Rwanda"
         />
-        <LeagueNav params={{ id }} status={status} />
+        <LeagueNav status={status} />
       </div>
       {children}
     </Container>

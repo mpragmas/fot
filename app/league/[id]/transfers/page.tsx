@@ -1,4 +1,5 @@
 import React from "react";
+import Image from "next/image";
 
 interface Player {
   name: string;
@@ -86,15 +87,27 @@ const TransfersTable: React.FC = () => {
       <table className="w-full border-separate border-spacing-y-3">
         <thead>
           <tr className="text-sm text-gray-400">
-            <th className="px-3 py-2 text-left font-medium border-b dark:border-dark-2">
+            <th className="dark:border-dark-2 border-b px-3 py-2 text-left font-medium">
               <span>Player</span>
             </th>
-            <th className="px-3 py-2 text-left font-medium border-b dark:border-dark-2">Fee</th>
-            <th className="px-3 py-2 text-left font-medium border-b dark:border-dark-2">From</th>
-            <th className="px-3 py-2 text-left font-medium border-b dark:border-dark-2">Position</th>
-            <th className="px-3 py-2 text-left font-medium border-b dark:border-dark-2">Contract</th>
-            <th className="px-3 py-2 text-left font-medium border-b dark:border-dark-2">Market value</th>
-            <th className="px-3 py-2 text-left font-medium border-b dark:border-dark-2">Date</th>
+            <th className="dark:border-dark-2 border-b px-3 py-2 text-left font-medium">
+              Fee
+            </th>
+            <th className="dark:border-dark-2 border-b px-3 py-2 text-left font-medium">
+              From
+            </th>
+            <th className="dark:border-dark-2 border-b px-3 py-2 text-left font-medium">
+              Position
+            </th>
+            <th className="dark:border-dark-2 border-b px-3 py-2 text-left font-medium">
+              Contract
+            </th>
+            <th className="dark:border-dark-2 border-b px-3 py-2 text-left font-medium">
+              Market value
+            </th>
+            <th className="dark:border-dark-2 border-b px-3 py-2 text-left font-medium">
+              Date
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -103,18 +116,20 @@ const TransfersTable: React.FC = () => {
               key={i}
               className="dark:hover:bg-dark-2 dark:border-dark-2 rounded-xl border-b text-sm transition"
             >
-              <td className="flex items-center gap-3 rounded-l-xl p-3 align-middle border-b dark:border-dark-2">
-                <img
+              <td className="dark:border-dark-2 flex items-center gap-3 rounded-l-xl border-b p-3 align-middle">
+                <Image
                   src={p.photo}
                   alt={p.name}
                   className="h-10 w-10 rounded-full object-cover"
+                  width={20}
+                  height={20}
                 />
                 <div>
                   <div className="dark:text-whitish font-semibold">
                     {p.name}
                   </div>
                   <div className="dark:text-dark-5 flex items-center gap-2 text-xs">
-                    <img
+                    <Image
                       src={p.clubLogo}
                       alt={p.club}
                       className="h-4 w-4 object-contain"
@@ -124,20 +139,24 @@ const TransfersTable: React.FC = () => {
                 </div>
               </td>
 
-              <td className="p-3 align-middle border-b dark:border-dark-2 text-gray-200">{p.fee}</td>
+              <td className="dark:border-dark-2 border-b p-3 align-middle text-gray-200">
+                {p.fee}
+              </td>
 
-              <td className="p-3 align-middle border-b dark:border-dark-2">
+              <td className="dark:border-dark-2 border-b p-3 align-middle">
                 <div className="flex items-center gap-2">
-                  <img
+                  <Image
                     src={p.fromLogo}
                     alt={p.from}
                     className="h-4 w-4 object-contain"
+                    width={20}
+                    height={20}
                   />
                   <span>{p.from}</span>
                 </div>
               </td>
 
-              <td className="p-3 align-middle border-b dark:border-dark-2">
+              <td className="dark:border-dark-2 border-b p-3 align-middle">
                 {p.position && (
                   <span className="dark:bg-dark-2 rounded-md px-2 py-0.5 text-xs font-semibold text-gray-300">
                     {p.position}
@@ -145,9 +164,13 @@ const TransfersTable: React.FC = () => {
                 )}
               </td>
 
-              <td className="p-3 align-middle border-b dark:border-dark-2">{p.contract}</td>
-              <td className="p-3 align-middle border-b dark:border-dark-2">{p.marketValue}</td>
-              <td className="rounded-r-xl p-3 align-middle border-b dark:border-dark-2 text-gray-400">
+              <td className="dark:border-dark-2 border-b p-3 align-middle">
+                {p.contract}
+              </td>
+              <td className="dark:border-dark-2 border-b p-3 align-middle">
+                {p.marketValue}
+              </td>
+              <td className="dark:border-dark-2 rounded-r-xl border-b p-3 align-middle text-gray-400">
                 {p.date}
               </td>
             </tr>

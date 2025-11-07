@@ -1,4 +1,5 @@
 import React from "react";
+import Image from "next/image";
 
 interface MatchCardProps {
   homeTeam: string;
@@ -23,7 +24,7 @@ const MatchCard = ({
     <div className="dark:text-whitish dark:border-dark-2 flex w-full flex-col items-center justify-between rounded-2xl border px-14 py-5 shadow-lg">
       <div className="flex w-full items-center gap-10">
         <div className="flex flex-col items-center gap-5">
-          <img src={homeLogo} alt={homeTeam} className="mb-2 h-10 w-10" />
+          <Image src={homeLogo} alt={homeTeam} className="mb-2 h-10 w-10" width={40} height={40} />
           <span className="text-sm whitespace-nowrap">{homeTeam}</span>
         </div>
 
@@ -33,7 +34,7 @@ const MatchCard = ({
               <p className="text-2xl font-semibold whitespace-nowrap">
                 {score}
               </p>
-              <p className="text-green mt-1 text-xs whitespace-nowrap">90'</p>
+              <p className="text-green mt-1 text-xs whitespace-nowrap">90&#39;</p>
             </>
           ) : (
             <>
@@ -44,7 +45,7 @@ const MatchCard = ({
         </div>
 
         <div className="flex flex-col items-center gap-5">
-          <img src={awayLogo} alt={awayTeam} className="mb-2 h-10 w-10" />
+          <Image src={awayLogo} alt={awayTeam} className="mb-2 h-10 w-10" width={40} height={40} />
           <span className="text-sm whitespace-nowrap">{awayTeam}</span>
         </div>
       </div>

@@ -1,7 +1,6 @@
-import TopStats from "@/app/components/TopStats";
 import PlayerStatCard from "@/app/ui/PlayerStatsCard";
 import React from "react";
-import { FaAngleLeft, FaAngleRight } from "react-icons/fa";
+import { FaAngleRight } from "react-icons/fa";
 
 const topRated = [
   {

@@ -5,10 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const LeagueNav = ({
-  params,
   status,
 }: {
-  params: { id: string };
   status: { name: string; href: string }[];
 }) => {
   const pathname = usePathname();

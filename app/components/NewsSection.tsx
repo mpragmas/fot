@@ -1,4 +1,5 @@
 import React from "react";
+import Image from "next/image";
 
 interface NewsItem {
   title: string;
@@ -27,10 +28,12 @@ const NewsSection: React.FC<NewsSectionProps> = ({ items }) => {
                 {item.source} · {item.time}
               </p>
             </div>
-            <img
+            <Image
               src={item.image}
               alt={item.title}
               className="h-25 w-25 flex-shrink-0 rounded-md object-cover"
+              width={100}
+              height={100}
             />
           </div>
         ))}

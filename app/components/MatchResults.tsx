@@ -1,4 +1,5 @@
 import React from "react";
+import Image from "next/image";
 
 interface Team {
   name: string;
@@ -63,10 +64,12 @@ const MatchResults: React.FC<MatchResultsProps> = ({ dateLabel, matches }) => {
             </span>
             <div className="flex w-full items-center justify-between">
               <div className="flex w-1/3 items-center space-x-2">
-                <img
+                <Image
                   src={match.homeTeam.logo}
                   alt={match.homeTeam.name}
                   className="h-5 w-5"
+                  width={20}
+                  height={20}
                 />
                 <span className="truncate text-sm font-medium text-gray-200">
                   {match.homeTeam.name}
@@ -79,10 +82,12 @@ const MatchResults: React.FC<MatchResultsProps> = ({ dateLabel, matches }) => {
                 <span className="truncate text-right text-sm font-medium text-gray-200">
                   {match.awayTeam.name}
                 </span>
-                <img
+                <Image
                   src={match.awayTeam.logo}
                   alt={match.awayTeam.name}
                   className="h-5 w-5"
+                  width={20}
+                  height={20}
                 />
               </div>
             </div>

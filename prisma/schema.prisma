@@ -1,0 +1,237 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+///
+enum Role {
+  FAN
+  REPORTER
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum MatchStatus {
+  SCHEDULED
+  LIVE
+  FINISHED
+}
+
+enum StatType {
+  GOAL
+  ASSIST
+  OWN_GOAL
+  YELLOW_CARD
+  RED_CARD
+  SHOT
+  CORNER
+  SUBSTITUTION
+}
+
+enum ProposalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// ------------------------ USERS ------------------------
+model User {
+  id                   Int       @id @default(autoincrement())
+  name                 String
+  email                String    @unique
+  password             String
+  role                 Role      @default(FAN)
+  profilePic           String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  // Relations
+  news                 News[]
+  matches              Match[]   @relation("ReporterMatches")
+  proposedTransfers    ProposedTransfer[]
+  comments             Comment[]
+  approvedTransfers    Transfer[] @relation("ApprovedTransfers")
+  coachedTeams         Team[]    @relation("CoachTeam")
+}
+
+// ------------------------ LEAGUES & SEASONS ------------------------
+model League {
+  id          Int       @id @default(autoincrement())
+  name        String
+  country     String
+  seasons     Season[]
+  teams       Team[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Season {
+  id          Int       @id @default(autoincrement())
+  year        String
+  league      League    @relation(fields: [leagueId], references: [id])
+  leagueId    Int
+  startDate   DateTime
+  endDate     DateTime
+  fixtures    Fixture[]
+  playerStats PlayerStat[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+// ------------------------ TEAMS & PLAYERS ------------------------
+model Team {
+  id               Int       @id @default(autoincrement())
+  name             String
+  league           League    @relation(fields: [leagueId], references: [id])
+  leagueId         Int
+  coach            User?     @relation("CoachTeam", fields: [coachId], references: [id])
+  coachId          Int?
+  players          Player[]
+  homeFixtures     Fixture[] @relation("HomeFixtures")
+  awayFixtures     Fixture[] @relation("AwayFixtures")
+  fromTransfers    Transfer[] @relation("FromTransfers")
+  toTransfers      Transfer[] @relation("ToTransfers")
+  proposedTransfers ProposedTransfer[]
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+}
+
+model Player {
+  id           Int       @id @default(autoincrement())
+  firstName    String
+  lastName     String
+  position     String
+  number       Int
+  team         Team      @relation(fields: [teamId], references: [id])
+  teamId       Int
+  stats        PlayerStat[]
+  lineups      Lineup[]
+  matchStats   MatchStat[]
+  transfers    Transfer[]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+// ------------------------ FIXTURES & MATCHES ------------------------
+model Fixture {
+  id          Int       @id @default(autoincrement())
+  season      Season    @relation(fields: [seasonId], references: [id])
+  seasonId    Int
+  homeTeam    Team      @relation("HomeFixtures", fields: [homeTeamId], references: [id])
+  homeTeamId  Int
+  awayTeam    Team      @relation("AwayFixtures", fields: [awayTeamId], references: [id])
+  awayTeamId  Int
+  match       Match?
+  date        DateTime
+  stadium     String?
+  referee     String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Match {
+  id          Int       @id @default(autoincrement())
+  fixture     Fixture   @relation(fields: [fixtureId], references: [id])
+  fixtureId   Int       @unique
+  status      MatchStatus @default(SCHEDULED)
+  reporter    User?     @relation("ReporterMatches", fields: [reporterId], references: [id])
+  reporterId  Int?
+  lineups     Lineup[]
+  stats       MatchStat[]
+  notes       Comment[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+// ------------------------ LINEUPS & MATCH STATS ------------------------
+model Lineup {
+  id          Int       @id @default(autoincrement())
+  match       Match     @relation(fields: [matchId], references: [id])
+  matchId     Int
+  player      Player    @relation(fields: [playerId], references: [id])
+  playerId    Int
+  position    String
+  isStarting  Boolean   @default(false)
+}
+
+model MatchStat {
+  id          Int       @id @default(autoincrement())
+  match       Match     @relation(fields: [matchId], references: [id])
+  matchId     Int
+  player      Player    @relation(fields: [playerId], references: [id])
+  playerId    Int
+  type        StatType
+  minute      Int
+  createdAt   DateTime  @default(now())
+}
+
+// ------------------------ PLAYER STATS ------------------------
+model PlayerStat {
+  id          Int       @id @default(autoincrement())
+  player      Player    @relation(fields: [playerId], references: [id])
+  playerId    Int
+  season      Season    @relation(fields: [seasonId], references: [id])
+  seasonId    Int
+  gamesPlayed Int       @default(0)
+  goals       Int       @default(0)
+  assists     Int       @default(0)
+  yellowCards Int       @default(0)
+  redCards    Int       @default(0)
+}
+
+// ------------------------ TRANSFERS ------------------------
+model Transfer {
+  id          Int       @id @default(autoincrement())
+  player      Player    @relation(fields: [playerId], references: [id])
+  playerId    Int
+  fromTeam    Team?     @relation("FromTransfers", fields: [fromTeamId], references: [id])
+  fromTeamId  Int?
+  toTeam      Team      @relation("ToTransfers", fields: [toTeamId], references: [id])
+  toTeamId    Int
+  approvedBy  User?     @relation("ApprovedTransfers", fields: [approvedById], references: [id])
+  approvedById Int?
+  createdAt   DateTime  @default(now())
+}
+
+model ProposedTransfer {
+  id          Int       @id @default(autoincrement())
+  playerName  String
+  proposedBy  User      @relation(fields: [proposedById], references: [id])
+  proposedById Int
+  team        Team      @relation(fields: [teamId], references: [id])
+  teamId      Int
+  status      ProposalStatus @default(PENDING)
+  createdAt   DateTime  @default(now())
+}
+
+// ------------------------ NEWS & COMMENTS ------------------------
+model News {
+  id          Int       @id @default(autoincrement())
+  title       String
+  content     String
+  author      User      @relation(fields: [authorId], references: [id])
+  authorId    Int
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Comment {
+  id          Int       @id @default(autoincrement())
+  content     String
+  match       Match?    @relation(fields: [matchId], references: [id])
+  matchId     Int?
+  author      User      @relation(fields: [authorId], references: [id])
+  authorId    Int
+  createdAt   DateTime  @default(now())
+}

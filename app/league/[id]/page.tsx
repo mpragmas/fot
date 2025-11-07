@@ -74,7 +74,7 @@ const newsItems = [
   },
 ];
 
-export default function Overview({ params }: { params: { id: string } }) {
+export default function Overview() {
   return (
     <div className="mt-7 w-full">
       <Matches />
