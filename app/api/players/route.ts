@@ -1,43 +1,61 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/app/lib/prisma";
+import { playerSchema } from "@/app/lib/validationSchema";
+import { buildQueryOptions } from "@/app/lib/buildQueryOptions";
+import { handleError } from "@/app/lib/routeError";
 
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const teamId = searchParams.get("teamId");
-    const take = searchParams.get("take");
-    const skip = searchParams.get("skip");
 
-    const where = teamId ? { teamId: Number(teamId) } : {};
-
-    const data = await prisma.player.findMany({
-      where,
-      orderBy: { id: "desc" },
-      take: take ? Number(take) : undefined,
-      skip: skip ? Number(skip) : undefined,
+    const queryOptions = buildQueryOptions(searchParams, {
+      allowedFilters: [
+        { name: "teamId", type: "number" },
+        { name: "position", type: "string" },
+        { name: "name", type: "search", fields: ["firstName", "lastName"] },
+        { name: "number", type: "range", min: "numberMin", max: "numberMax" },
+      ],
     });
 
-    return NextResponse.json(data);
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message ?? "Failed to list players" }, { status: 500 });
+    // Fetch both players and total for pagination support
+    const [players, total] = await Promise.all([
+      prisma.player.findMany(queryOptions),
+      prisma.player.count({ where: queryOptions.where }),
+    ]);
+
+    return NextResponse.json({
+      total,
+      data: players,
+    });
+  } catch (err: any) {
+    return handleError(err, "Failed to list players");
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { firstName, lastName, position, number, teamId } = body ?? {};
+    const validation = playerSchema.safeParse(body);
 
-    if (!firstName || !lastName || !position || typeof number !== "number" || typeof teamId !== "number") {
-      return NextResponse.json({ error: "firstName, lastName, position, number, teamId are required" }, { status: 400 });
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: validation.error.message },
+        { status: 400 },
+      );
     }
 
     const player = await prisma.player.create({
-      data: { firstName, lastName, position, number, teamId },
+      data: {
+        firstName: body.firstName,
+        lastName: body.lastName,
+        position: body.position,
+        number: body.number,
+        teamId: body.teamId,
+      },
     });
 
     return NextResponse.json(player, { status: 201 });
   } catch (e: any) {
-    return NextResponse.json({ error: e.message ?? "Failed to create player" }, { status: 500 });
+    return handleError(e, "Failed to create player");
   }
 }

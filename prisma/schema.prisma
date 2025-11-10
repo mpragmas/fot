@@ -10,7 +10,7 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -60,9 +60,8 @@ model User {
   news                 News[]
   matches              Match[]   @relation("ReporterMatches")
   proposedTransfers    ProposedTransfer[]
-  comments             Comment[]
   approvedTransfers    Transfer[] @relation("ApprovedTransfers")
-  coachedTeams         Team[]    @relation("CoachTeam")
+
 }
 
 // ------------------------ LEAGUES & SEASONS ------------------------
@@ -95,8 +94,7 @@ model Team {
   name             String
   league           League    @relation(fields: [leagueId], references: [id])
   leagueId         Int
-  coach            User?     @relation("CoachTeam", fields: [coachId], references: [id])
-  coachId          Int?
+  coach          String?
   players          Player[]
   homeFixtures     Fixture[] @relation("HomeFixtures")
   awayFixtures     Fixture[] @relation("AwayFixtures")
@@ -149,7 +147,6 @@ model Match {
   reporterId  Int?
   lineups     Lineup[]
   stats       MatchStat[]
-  notes       Comment[]
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 }
@@ -224,14 +221,4 @@ model News {
   authorId    Int
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-}
-
-model Comment {
-  id          Int       @id @default(autoincrement())
-  content     String
-  match       Match?    @relation(fields: [matchId], references: [id])
-  matchId     Int?
-  author      User      @relation(fields: [authorId], references: [id])
-  authorId    Int
-  createdAt   DateTime  @default(now())
 }
