@@ -51,16 +51,23 @@ model User {
   name                 String
   email                String    @unique
   password             String
+  emailVerified        DateTime?
   role                 Role      @default(FAN)
-  profilePic           String?
+  Image           String?
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
+
+  isActive             Boolean   @default(true)
+
+   resetToken     String?  // new
+  resetTokenExp  DateTime? // new
 
   // Relations
   news                 News[]
   matches              Match[]   @relation("ReporterMatches")
   proposedTransfers    ProposedTransfer[]
   approvedTransfers    Transfer[] @relation("ApprovedTransfers")
+
 
 }
 
