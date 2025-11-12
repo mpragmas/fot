@@ -23,9 +23,9 @@ enum Role {
 }
 
 enum MatchStatus {
-  SCHEDULED
+  UPCOMING
   LIVE
-  FINISHED
+  COMPLETED
 }
 
 enum StatType {
@@ -149,7 +149,7 @@ model Match {
   id          Int       @id @default(autoincrement())
   fixture     Fixture   @relation(fields: [fixtureId], references: [id])
   fixtureId   Int       @unique
-  status      MatchStatus @default(SCHEDULED)
+  status      MatchStatus @default(UPCOMING)
   reporter    User?     @relation("ReporterMatches", fields: [reporterId], references: [id])
   reporterId  Int?
   lineups     Lineup[]

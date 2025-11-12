@@ -37,3 +37,39 @@ export const patchTeamSchema = z.object({
   leagueId: z.number().optional(),
   coach: z.string().optional().nullable(),
 });
+
+export const passwordSchema = z
+  .string()
+  .min(6, "Password must be at least 6 characters long")
+  .regex(/\d/, "Password must contain at least one number");
+
+export const fixtureSchema = z.object({
+  seasonId: z.number().min(1, "Season is required"),
+  homeTeamId: z.number().min(1, "Home team is required"),
+  awayTeamId: z.number().min(1, "Away team is required"),
+  date: z.string().min(1, "Date is required"),
+  stadium: z.string().optional().nullable(),
+  referee: z.string().optional().nullable(),
+});
+
+export const patchFixtureSchema = z.object({
+  seasonId: z.number().optional(),
+  homeTeamId: z.number().optional(),
+  awayTeamId: z.number().optional(),
+  date: z.string().optional(),
+  stadium: z.string().optional().nullable(),
+  referee: z.string().optional().nullable(),
+});
+
+export const matchStatusEnum = z.enum(["UPCOMING", "LIVE", "COMPLETED"]);
+
+export const matchSchema = z.object({
+  fixtureId: z.number().min(1, "Fixture is required"),
+  status: matchStatusEnum.optional(),
+  reporterId: z.number().optional(),
+});
+
+export const patchMatchSchema = z.object({
+  status: matchStatusEnum.optional(),
+  reporterId: z.number().nullable().optional(),
+});

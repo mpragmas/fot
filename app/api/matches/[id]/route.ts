@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/app/lib/prisma";
 import { handleError } from "@/app/lib/routeError";
-import { patchTeamSchema } from "@/app/lib/validationSchema";
+import { patchMatchSchema } from "@/app/lib/validationSchema";
 
 export async function GET(
   _req: NextRequest,
@@ -13,17 +13,20 @@ export async function GET(
       return NextResponse.json({ error: "Invalid id" }, { status: 400 });
     }
 
-    const team = await prisma.team.findUnique({
+    const match = await prisma.match.findUnique({
       where: { id },
-      include: { league: true },
+      include: {
+        fixture: { include: { season: true, homeTeam: true, awayTeam: true } },
+        reporter: true,
+      },
     });
-    if (!team) {
+    if (!match) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
-    return NextResponse.json(team);
+    return NextResponse.json(match);
   } catch (e: any) {
-    return handleError(e, "Failed to fetch team");
+    return handleError(e, "Failed to fetch match");
   }
 }
 
@@ -38,7 +41,7 @@ export async function PATCH(
     }
 
     const body = await req.json();
-    const validation = patchTeamSchema.safeParse(body);
+    const validation = patchMatchSchema.safeParse(body);
     if (!validation.success) {
       return NextResponse.json(
         { error: validation.error.message },
@@ -46,19 +49,21 @@ export async function PATCH(
       );
     }
 
-    const { name, leagueId, coach } = validation.data;
-    const data = {
-      ...(name !== undefined ? { name } : {}),
-      ...(coach !== undefined ? { coach } : {}),
-      ...(leagueId !== undefined
-        ? { league: { connect: { id: leagueId } } }
+    const { status, reporterId } = validation.data;
+
+    const data: any = {
+      ...(status !== undefined ? { status } : {}),
+      ...(reporterId !== undefined
+        ? reporterId === null
+          ? { reporter: { disconnect: true } }
+          : { reporter: { connect: { id: reporterId } } }
         : {}),
     };
-    const team = await prisma.team.update({ where: { id }, data });
 
-    return NextResponse.json(team);
+    const match = await prisma.match.update({ where: { id }, data });
+    return NextResponse.json(match);
   } catch (e: any) {
-    return handleError(e, "Failed to update team", {
+    return handleError(e, "Failed to update match", {
       notFoundCodes: ["P2025"],
     });
   }
@@ -74,10 +79,10 @@ export async function DELETE(
       return NextResponse.json({ error: "Invalid id" }, { status: 400 });
     }
 
-    await prisma.team.delete({ where: { id } });
+    await prisma.match.delete({ where: { id } });
     return NextResponse.json({ success: true });
   } catch (e: any) {
-    return handleError(e, "Failed to delete team", {
+    return handleError(e, "Failed to delete match", {
       notFoundCodes: ["P2025"],
     });
   }

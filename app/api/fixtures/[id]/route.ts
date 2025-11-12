@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/app/lib/prisma";
 import { handleError } from "@/app/lib/routeError";
-import { patchTeamSchema } from "@/app/lib/validationSchema";
+import { patchFixtureSchema } from "@/app/lib/validationSchema";
 
 export async function GET(
   _req: NextRequest,
@@ -13,17 +13,17 @@ export async function GET(
       return NextResponse.json({ error: "Invalid id" }, { status: 400 });
     }
 
-    const team = await prisma.team.findUnique({
+    const fixture = await prisma.fixture.findUnique({
       where: { id },
-      include: { league: true },
+      include: { season: true, homeTeam: true, awayTeam: true, match: true },
     });
-    if (!team) {
+    if (!fixture) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
-    return NextResponse.json(team);
+    return NextResponse.json(fixture);
   } catch (e: any) {
-    return handleError(e, "Failed to fetch team");
+    return handleError(e, "Failed to fetch fixture");
   }
 }
 
@@ -38,7 +38,7 @@ export async function PATCH(
     }
 
     const body = await req.json();
-    const validation = patchTeamSchema.safeParse(body);
+    const validation = patchFixtureSchema.safeParse(body);
     if (!validation.success) {
       return NextResponse.json(
         { error: validation.error.message },
@@ -46,19 +46,28 @@ export async function PATCH(
       );
     }
 
-    const { name, leagueId, coach } = validation.data;
-    const data = {
-      ...(name !== undefined ? { name } : {}),
-      ...(coach !== undefined ? { coach } : {}),
-      ...(leagueId !== undefined
-        ? { league: { connect: { id: leagueId } } }
-        : {}),
-    };
-    const team = await prisma.team.update({ where: { id }, data });
+    const { seasonId, homeTeamId, awayTeamId, date, stadium, referee } =
+      validation.data;
 
-    return NextResponse.json(team);
+    const data: any = {
+      ...(seasonId !== undefined
+        ? { season: { connect: { id: seasonId } } }
+        : {}),
+      ...(homeTeamId !== undefined
+        ? { homeTeam: { connect: { id: homeTeamId } } }
+        : {}),
+      ...(awayTeamId !== undefined
+        ? { awayTeam: { connect: { id: awayTeamId } } }
+        : {}),
+      ...(date !== undefined ? { date: new Date(date) } : {}),
+      ...(stadium !== undefined ? { stadium } : {}),
+      ...(referee !== undefined ? { referee } : {}),
+    };
+
+    const fixture = await prisma.fixture.update({ where: { id }, data });
+    return NextResponse.json(fixture);
   } catch (e: any) {
-    return handleError(e, "Failed to update team", {
+    return handleError(e, "Failed to update fixture", {
       notFoundCodes: ["P2025"],
     });
   }
@@ -74,10 +83,10 @@ export async function DELETE(
       return NextResponse.json({ error: "Invalid id" }, { status: 400 });
     }
 
-    await prisma.team.delete({ where: { id } });
+    await prisma.fixture.delete({ where: { id } });
     return NextResponse.json({ success: true });
   } catch (e: any) {
-    return handleError(e, "Failed to delete team", {
+    return handleError(e, "Failed to delete fixture", {
       notFoundCodes: ["P2025"],
     });
   }
