@@ -102,6 +102,7 @@ model Team {
   league           League    @relation(fields: [leagueId], references: [id])
   leagueId         Int
   coach          String?
+ location         String?
   players          Player[]
   homeFixtures     Fixture[] @relation("HomeFixtures")
   awayFixtures     Fixture[] @relation("AwayFixtures")

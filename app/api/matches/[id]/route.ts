@@ -17,7 +17,15 @@ export async function GET(
       where: { id },
       include: {
         fixture: { include: { season: true, homeTeam: true, awayTeam: true } },
-        reporter: true,
+        reporter: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+            Image: true,
+          },
+        },
       },
     });
     if (!match) {

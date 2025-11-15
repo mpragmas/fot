@@ -5,16 +5,16 @@ import prisma from "@/app/lib/prisma";
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
+    // const session = await getServerSession(authOptions);
 
-    if (!session || !session.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    // if (!session || !session.user) {
+    //   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // }
 
-    const role = session.user.role;
-    if (!["ADMIN", "SUPER_ADMIN"].includes(role)) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    // const role = session.user.role;
+    // if (!["ADMIN", "SUPER_ADMIN"].includes(role)) {
+    //   return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    // }
 
     const users = await prisma.user.findMany({
       select: {

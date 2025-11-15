@@ -30,7 +30,9 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
+
     const validation = fixtureSchema.safeParse(body);
+
     if (!validation.success) {
       return NextResponse.json(
         { error: validation.error.message },

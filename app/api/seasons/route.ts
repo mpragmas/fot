@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/app/lib/prisma";
 import { buildQueryOptions } from "@/app/lib/buildQueryOptions";
 import { handleError } from "@/app/lib/routeError";
-import { teamSchema } from "@/app/lib/validationSchema";
+import { seasonSchema } from "@/app/lib/validationSchema";
 
 export async function GET(req: NextRequest) {
   try {
@@ -11,30 +11,28 @@ export async function GET(req: NextRequest) {
     const queryOptions = buildQueryOptions(searchParams, {
       allowedFilters: [
         { name: "leagueId", type: "number" },
-        { name: "coach", type: "string" },
-        { name: "location", type: "string" },
-        { name: "name", type: "search", fields: ["name"] },
+        { name: "year", type: "string" },
       ],
     });
 
     const [data, total] = await Promise.all([
-      prisma.team.findMany({
+      prisma.season.findMany({
         ...queryOptions,
         include: { league: true },
       }),
-      prisma.team.count({ where: queryOptions.where }),
+      prisma.season.count({ where: queryOptions.where }),
     ]);
 
     return NextResponse.json({ total, data });
   } catch (e: any) {
-    return handleError(e, "Failed to list teams");
+    return handleError(e, "Failed to list seasons");
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const validation = teamSchema.safeParse(body);
+    const validation = seasonSchema.safeParse(body);
     if (!validation.success) {
       return NextResponse.json(
         { error: validation.error.message },
@@ -42,17 +40,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const team = await prisma.team.create({
+    const season = await prisma.season.create({
       data: {
-        name: body.name,
+        year: body.year,
         leagueId: body.leagueId,
-        coach: body.coach ?? null,
-        location: body.location ?? null,
+        startDate: new Date(body.startDate),
+        endDate: new Date(body.endDate),
       },
     });
 
-    return NextResponse.json(team, { status: 201 });
+    return NextResponse.json(season, { status: 201 });
   } catch (e: any) {
-    return handleError(e, "Failed to create team");
+    return handleError(e, "Failed to create season");
   }
 }

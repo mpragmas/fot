@@ -20,8 +20,18 @@ export async function GET(req: NextRequest) {
       prisma.match.findMany({
         ...queryOptions,
         include: {
-          fixture: { include: { season: true, homeTeam: true, awayTeam: true } },
-          reporter: true,
+          fixture: {
+            include: { season: true, homeTeam: true, awayTeam: true },
+          },
+          reporter: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              role: true,
+              Image: true,
+            },
+          },
         },
       }),
       prisma.match.count({ where: queryOptions.where }),
@@ -38,7 +48,10 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const validation = matchSchema.safeParse(body);
     if (!validation.success) {
-      return NextResponse.json({ error: validation.error.message }, { status: 400 });
+      return NextResponse.json(
+        { error: validation.error.message },
+        { status: 400 },
+      );
     }
 
     const { fixtureId, status, reporterId } = body;

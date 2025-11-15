@@ -26,16 +26,32 @@ export const patchLeagueSchema = z.object({
   country: z.string().optional(),
 });
 
+export const seasonSchema = z.object({
+  year: z.string().min(1, "Year is required"),
+  leagueId: z.number().min(1, "League is required"),
+  startDate: z.string().min(1, "Start date is required"),
+  endDate: z.string().min(1, "End date is required"),
+});
+
+export const patchSeasonSchema = z.object({
+  year: z.string().optional(),
+  leagueId: z.number().optional(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+});
+
 export const teamSchema = z.object({
   name: z.string().min(1, "Name is required"),
   leagueId: z.number().min(1, "League is required"),
   coach: z.string().optional().nullable(),
+  location: z.string().optional().nullable(),
 });
 
 export const patchTeamSchema = z.object({
   name: z.string().optional(),
   leagueId: z.number().optional(),
   coach: z.string().optional().nullable(),
+  location: z.string().optional().nullable(),
 });
 
 export const passwordSchema = z
@@ -72,4 +88,45 @@ export const matchSchema = z.object({
 export const patchMatchSchema = z.object({
   status: matchStatusEnum.optional(),
   reporterId: z.number().nullable().optional(),
+});
+
+export const statTypeEnum = z.enum([
+  "GOAL",
+  "ASSIST",
+  "OWN_GOAL",
+  "YELLOW_CARD",
+  "RED_CARD",
+  "SHOT",
+  "CORNER",
+  "SUBSTITUTION",
+]);
+
+export const createMatchStatSchema = z.object({
+  playerId: z.number().min(1, "Player is required"),
+  type: statTypeEnum,
+  minute: z.number().int().min(0, "Minute must be >= 0"),
+});
+
+export const upsertLineupSchema = z.object({
+  items: z
+    .array(
+      z.object({
+        playerId: z.number().min(1, "Player is required"),
+        position: z.string().min(1, "Position is required"),
+        isStarting: z.boolean().optional(),
+      }),
+    )
+    .min(1, "At least one lineup item is required"),
+});
+
+export const patchMatchStatSchema = z.object({
+  playerId: z.number().min(1, "Player is required").optional(),
+  type: statTypeEnum.optional(),
+  minute: z.number().int().min(0, "Minute must be >= 0").optional(),
+});
+
+export const patchLineupItemSchema = z.object({
+  playerId: z.number().min(1, "Player is required").optional(),
+  position: z.string().min(1, "Position is required").optional(),
+  isStarting: z.boolean().optional(),
 });
