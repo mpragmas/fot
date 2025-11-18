@@ -11,11 +11,12 @@ import { recomputePlayerStatsForMatch } from "@/app/lib/playerStats";
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { id: string; statId: string } },
+  { params }: { params: Promise<{ id: string; statId: string }> },
 ) {
   try {
-    const matchId = Number(params.id);
-    const statId = Number(params.statId);
+    const { id, statId: statIdParam } = await params;
+    const matchId = Number(id);
+    const statId = Number(statIdParam);
     if (!Number.isFinite(matchId) || !Number.isFinite(statId)) {
       return NextResponse.json({ error: "Invalid id" }, { status: 400 });
     }
@@ -36,13 +37,14 @@ export async function GET(
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string; statId: string } },
+  { params }: { params: Promise<{ id: string; statId: string }> },
 ) {
   try {
     ensureSocketStarted();
 
-    const matchId = Number(params.id);
-    const statId = Number(params.statId);
+    const { id, statId: statIdParam } = await params;
+    const matchId = Number(id);
+    const statId = Number(statIdParam);
     if (!Number.isFinite(matchId) || !Number.isFinite(statId)) {
       return NextResponse.json({ error: "Invalid id" }, { status: 400 });
     }
@@ -82,13 +84,14 @@ export async function PATCH(
 
 export async function DELETE(
   _req: NextRequest,
-  { params }: { params: { id: string; statId: string } },
+  { params }: { params: Promise<{ id: string; statId: string }> },
 ) {
   try {
     ensureSocketStarted();
 
-    const matchId = Number(params.id);
-    const statId = Number(params.statId);
+    const { id, statId: statIdParam } = await params;
+    const matchId = Number(id);
+    const statId = Number(statIdParam);
     if (!Number.isFinite(matchId) || !Number.isFinite(statId)) {
       return NextResponse.json({ error: "Invalid id" }, { status: 400 });
     }

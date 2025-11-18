@@ -4,12 +4,13 @@ import { handleError } from "@/app/lib/routeError";
 import { patchNewsSchema } from "@/app/lib/validationSchema";
 
 interface RouteParams {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export async function GET(_req: NextRequest, { params }: RouteParams) {
   try {
-    const id = Number(params.id);
+    const { id: idParam } = await params;
+    const id = Number(idParam);
 
     const news = await prisma.news.findUnique({
       where: { id },
@@ -28,7 +29,8 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
 
 export async function PATCH(req: NextRequest, { params }: RouteParams) {
   try {
-    const id = Number(params.id);
+    const { id: idParam } = await params;
+    const id = Number(idParam);
     const body = await req.json();
 
     const validation = patchNewsSchema.safeParse(body);
@@ -54,7 +56,8 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
 
 export async function DELETE(_req: NextRequest, { params }: RouteParams) {
   try {
-    const id = Number(params.id);
+    const { id: idParam } = await params;
+    const id = Number(idParam);
 
     await prisma.news.delete({ where: { id } });
 

@@ -7,10 +7,11 @@ import { recomputePlayerStatsForMatch } from "@/app/lib/playerStats";
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const matchId = Number(params.id);
+    const { id } = await params;
+    const matchId = Number(id);
     if (!Number.isFinite(matchId)) {
       return NextResponse.json({ error: "Invalid id" }, { status: 400 });
     }
@@ -29,12 +30,13 @@ export async function GET(
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     ensureSocketStarted();
 
-    const matchId = Number(params.id);
+    const { id } = await params;
+    const matchId = Number(id);
     if (!Number.isFinite(matchId)) {
       return NextResponse.json({ error: "Invalid id" }, { status: 400 });
     }

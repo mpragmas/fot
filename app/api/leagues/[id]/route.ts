@@ -5,10 +5,11 @@ import { patchLeagueSchema } from "@/app/lib/validationSchema";
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const id = Number(params.id);
+    const { id: idParam } = await params;
+    const id = Number(idParam);
     if (Number.isNaN(id)) {
       return NextResponse.json({ error: "Invalid id" }, { status: 400 });
     }
@@ -26,10 +27,11 @@ export async function GET(
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const id = Number(params.id);
+    const { id: idParam } = await params;
+    const id = Number(idParam);
     if (Number.isNaN(id)) {
       return NextResponse.json({ error: "Invalid id" }, { status: 400 });
     }
@@ -37,7 +39,10 @@ export async function PATCH(
     const body = await req.json();
     const validation = patchLeagueSchema.safeParse(body);
     if (!validation.success) {
-      return NextResponse.json({ error: validation.error.message }, { status: 400 });
+      return NextResponse.json(
+        { error: validation.error.message },
+        { status: 400 },
+      );
     }
 
     const league = await prisma.league.update({
@@ -47,16 +52,19 @@ export async function PATCH(
 
     return NextResponse.json(league);
   } catch (e: any) {
-    return handleError(e, "Failed to update league", { notFoundCodes: ["P2025"] });
+    return handleError(e, "Failed to update league", {
+      notFoundCodes: ["P2025"],
+    });
   }
 }
 
 export async function DELETE(
   _req: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const id = Number(params.id);
+    const { id: idParam } = await params;
+    const id = Number(idParam);
     if (Number.isNaN(id)) {
       return NextResponse.json({ error: "Invalid id" }, { status: 400 });
     }
@@ -64,6 +72,8 @@ export async function DELETE(
     await prisma.league.delete({ where: { id } });
     return NextResponse.json({ success: true });
   } catch (e: any) {
-    return handleError(e, "Failed to delete league", { notFoundCodes: ["P2025"] });
+    return handleError(e, "Failed to delete league", {
+      notFoundCodes: ["P2025"],
+    });
   }
 }

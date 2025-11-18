@@ -6,11 +6,12 @@ import { ensureSocketStarted, emitLineup } from "@/app/lib/socket";
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { id: string; lineupId: string } },
+  { params }: { params: Promise<{ id: string; lineupId: string }> },
 ) {
   try {
-    const matchId = Number(params.id);
-    const lineupId = Number(params.lineupId);
+    const { id, lineupId: lineupIdParam } = await params;
+    const matchId = Number(id);
+    const lineupId = Number(lineupIdParam);
     if (!Number.isFinite(matchId) || !Number.isFinite(lineupId)) {
       return NextResponse.json({ error: "Invalid id" }, { status: 400 });
     }
@@ -31,13 +32,14 @@ export async function GET(
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string; lineupId: string } },
+  { params }: { params: Promise<{ id: string; lineupId: string }> },
 ) {
   try {
     ensureSocketStarted();
 
-    const matchId = Number(params.id);
-    const lineupId = Number(params.lineupId);
+    const { id, lineupId: lineupIdParam } = await params;
+    const matchId = Number(id);
+    const lineupId = Number(lineupIdParam);
     if (!Number.isFinite(matchId) || !Number.isFinite(lineupId)) {
       return NextResponse.json({ error: "Invalid id" }, { status: 400 });
     }
@@ -51,7 +53,9 @@ export async function PATCH(
       );
     }
 
-    const existing = await prisma.lineup.findUnique({ where: { id: lineupId } });
+    const existing = await prisma.lineup.findUnique({
+      where: { id: lineupId },
+    });
     if (!existing || existing.matchId !== matchId) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
@@ -78,18 +82,21 @@ export async function PATCH(
 
 export async function DELETE(
   _req: NextRequest,
-  { params }: { params: { id: string; lineupId: string } },
+  { params }: { params: Promise<{ id: string; lineupId: string }> },
 ) {
   try {
     ensureSocketStarted();
 
-    const matchId = Number(params.id);
-    const lineupId = Number(params.lineupId);
+    const { id, lineupId: lineupIdParam } = await params;
+    const matchId = Number(id);
+    const lineupId = Number(lineupIdParam);
     if (!Number.isFinite(matchId) || !Number.isFinite(lineupId)) {
       return NextResponse.json({ error: "Invalid id" }, { status: 400 });
     }
 
-    const existing = await prisma.lineup.findUnique({ where: { id: lineupId } });
+    const existing = await prisma.lineup.findUnique({
+      where: { id: lineupId },
+    });
     if (!existing || existing.matchId !== matchId) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
