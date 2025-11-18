@@ -1,34 +1,30 @@
-import nodemailer, { Transporter } from "nodemailer";
+import { Resend } from "resend";
+import type { ReactElement } from "react";
 
-let transporter: Transporter | null = null;
-
-function getTransporter(): Transporter {
-  if (transporter) return transporter;
-  transporter = nodemailer.createTransport({
-    host: process.env.EMAIL_HOST,
-    port: Number(process.env.EMAIL_PORT),
-    auth: {
-      user: process.env.EMAIL_SERVER_USER,
-      pass: process.env.EMAIL_SERVER_PASS,
-    },
-  });
-  return transporter;
-}
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 export type SendEmailOptions = {
   to: string;
   subject: string;
+  react?: ReactElement;
   html?: string;
   text?: string;
   from?: string;
 };
 
-export async function sendEmail({ to, subject, html, text, from }: SendEmailOptions) {
-  const tx = getTransporter();
-  await tx.sendMail({
-    from: from || process.env.EMAIL_FROM,
+export async function sendEmail({
+  to,
+  subject,
+  react,
+  html,
+  text,
+  from,
+}: SendEmailOptions) {
+  await resend.emails.send({
+    from: from || (process.env.EMAIL_FROM as string),
     to,
     subject,
+    react,
     html,
     text,
   });

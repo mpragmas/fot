@@ -25,7 +25,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="fusion-extension-loaded" suppressHydrationWarning>
+    <html
+      lang="en"
+      className="fusion-extension-loaded"
+      suppressHydrationWarning
+    >
       <head>
         <script
           dangerouslySetInnerHTML={{
@@ -37,11 +41,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <main className="bg-light-1 dark:bg-dark">
-          <Header />
-          {children}
-          <Footer />
-        </main>
+        {children}
       </body>
     </html>
   );

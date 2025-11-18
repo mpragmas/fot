@@ -1,11 +1,12 @@
 import TopStats from "@/app/components/TopStats";
 import React from "react";
 import NewsSection from "@/app/components/NewsSection";
-import Table from "@/app/league/_components/Table";
+
 import MatchInfo from "../_components/TeamForm";
 import NextMatch from "../_components/NextMatch";
 import TeamForm from "../_components/TeamForm";
 import TeamFixtures from "../_components/TeamFixtures";
+import Table from "../../league/_components/Table";
 
 const newsItems = [
   {

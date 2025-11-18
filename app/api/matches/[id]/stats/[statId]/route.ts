@@ -2,7 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/app/lib/prisma";
 import { handleError } from "@/app/lib/routeError";
 import { patchMatchStatSchema } from "@/app/lib/validationSchema";
-import { ensureSocketStarted, emitStatDeleted, emitStatUpdated } from "@/app/lib/socket";
+import {
+  ensureSocketStarted,
+  emitStatDeleted,
+  emitStatUpdated,
+} from "@/app/lib/socket";
+import { recomputePlayerStatsForMatch } from "@/app/lib/playerStats";
 
 export async function GET(
   _req: NextRequest,
@@ -51,7 +56,9 @@ export async function PATCH(
       );
     }
 
-    const existing = await prisma.matchStat.findUnique({ where: { id: statId } });
+    const existing = await prisma.matchStat.findUnique({
+      where: { id: statId },
+    });
     if (!existing || existing.matchId !== matchId) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
@@ -62,6 +69,8 @@ export async function PATCH(
     });
 
     emitStatUpdated(matchId, updated);
+
+    await recomputePlayerStatsForMatch(matchId);
 
     return NextResponse.json(updated);
   } catch (e: unknown) {
@@ -84,7 +93,9 @@ export async function DELETE(
       return NextResponse.json({ error: "Invalid id" }, { status: 400 });
     }
 
-    const existing = await prisma.matchStat.findUnique({ where: { id: statId } });
+    const existing = await prisma.matchStat.findUnique({
+      where: { id: statId },
+    });
     if (!existing || existing.matchId !== matchId) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
@@ -92,6 +103,8 @@ export async function DELETE(
     await prisma.matchStat.delete({ where: { id: statId } });
 
     emitStatDeleted(matchId, statId);
+
+    await recomputePlayerStatsForMatch(matchId);
 
     return NextResponse.json({ success: true });
   } catch (e: unknown) {

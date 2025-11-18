@@ -79,6 +79,17 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (e: any) {
+    // Foreign key constraint (e.g. Lineup_playerId_fkey) – cannot delete player
+    if (e?.code === "P2003") {
+      return NextResponse.json(
+        {
+          error:
+            "Cannot delete player because they are still referenced in other records (e.g. lineups or stats). Remove those references first.",
+        },
+        { status: 409 },
+      );
+    }
+
     return handleError(e, "Failed to delete player", {
       notFoundCodes: ["P2025"],
     });

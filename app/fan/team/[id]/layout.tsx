@@ -1,7 +1,7 @@
 import React from "react";
 import Container from "@/app/ui/Container";
-import LeagueHeader from "@/app/league/_components/LeagueHeader";
-import LeagueNav from "@/app/league/_components/LeagueNav";
+import LeagueHeader from "../../league/_components/LeagueHeader";
+import LeagueNav from "../../league/_components/LeagueNav";
 
 export default async function TeamLayout({
   children,

@@ -3,6 +3,7 @@ import prisma from "@/app/lib/prisma";
 import { handleError } from "@/app/lib/routeError";
 import { createMatchStatSchema } from "@/app/lib/validationSchema";
 import { ensureSocketStarted, emitStat } from "@/app/lib/socket";
+import { recomputePlayerStatsForMatch } from "@/app/lib/playerStats";
 
 export async function GET(
   _req: NextRequest,
@@ -54,6 +55,8 @@ export async function POST(
     });
 
     emitStat(matchId, stat);
+
+    await recomputePlayerStatsForMatch(matchId);
 
     return NextResponse.json(stat, { status: 201 });
   } catch (e: unknown) {

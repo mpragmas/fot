@@ -1,7 +1,6 @@
-import React from "react";
-import LeagueHeader from "@/app/league/_components/LeagueHeader";
 import Container from "@/app/ui/Container";
-import LeagueNav from "@/app/league/_components/LeagueNav";
+import LeagueHeader from "../_components/LeagueHeader";
+import LeagueNav from "../_components/LeagueNav";
 
 interface LayoutProps {
   children: React.ReactNode;

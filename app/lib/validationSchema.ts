@@ -130,3 +130,15 @@ export const patchLineupItemSchema = z.object({
   position: z.string().min(1, "Position is required").optional(),
   isStarting: z.boolean().optional(),
 });
+
+export const newsSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  content: z.string().min(1, "Content is required"),
+  authorId: z.number().min(1, "Author is required"),
+});
+
+export const patchNewsSchema = z.object({
+  title: z.string().optional(),
+  content: z.string().optional(),
+  authorId: z.number().optional(),
+});
