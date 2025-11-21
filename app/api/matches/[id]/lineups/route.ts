@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/app/lib/prisma";
+import type { Prisma } from "@prisma/client";
 import { handleError } from "@/app/lib/routeError";
 import { upsertLineupSchema } from "@/app/lib/validationSchema";
 import { ensureSocketStarted, emitLineup } from "@/app/lib/socket";
@@ -58,19 +59,21 @@ export async function POST(
     }));
 
     // Write → Delete and Insert → Fetch full lineup with player
-    const result = await prisma.$transaction(async (tx) => {
-      await tx.lineup.deleteMany({ where: { matchId } });
+    const result = await prisma.$transaction(
+      async (tx: Prisma.TransactionClient) => {
+        await tx.lineup.deleteMany({ where: { matchId } });
 
-      await tx.lineup.createMany({ data: items });
+        await tx.lineup.createMany({ data: items });
 
-      const full = await tx.lineup.findMany({
-        where: { matchId },
-        include: { player: true },
-        orderBy: [{ isStarting: "desc" }, { position: "asc" }, { id: "asc" }],
-      });
+        const full = await tx.lineup.findMany({
+          where: { matchId },
+          include: { player: true },
+          orderBy: [{ isStarting: "desc" }, { position: "asc" }, { id: "asc" }],
+        });
 
-      return full;
-    });
+        return full;
+      },
+    );
 
     // Real-time emit always returns full objects with player
     emitLineup(matchId, result);

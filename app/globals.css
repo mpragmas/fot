@@ -20,6 +20,7 @@
   --color-dark-5: rgb(141 148 153);
 
   --color-whitish: #ffffff;
+  --color-light-0: #fafafa;
   --color-light-1: oklch(0.96 0 0);
   --color-light-2: rgb(245 245 245);
   --color-light-3: rgb(204 204 204);
@@ -28,6 +29,17 @@
   --color-green-2: rgb(0 152 95);
 
   --color-blue-1: rgb(118, 180, 229);
+  --color-blue-2: #009ddb;
+  --color-blue-3: #e7f5ff;
+
+  --color-gray-1: #65758b;
+  --color-gray-2: #e5e7eb;
+  --color-gray-3: #f1f5f9;
+
+  --color-red-1: #e03131;
+  --color-red-2: #ffe3e3;
+
+  /* reporter */
 }
 @variant dark (.dark &);
 

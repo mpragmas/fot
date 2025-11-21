@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/app/lib/prisma";
 import { playerSchema } from "@/app/lib/validationSchema";
 import { buildQueryOptions } from "@/app/lib/buildQueryOptions";
 import { handleError } from "@/app/lib/routeError";
+import prisma from "@/app/lib/prisma";
 
 export async function GET(req: NextRequest) {
   try {
