@@ -1,98 +1,177 @@
-import React from 'react';
+import React from "react";
+import { FiEdit2 } from "react-icons/fi";
+import { MdDeleteOutline, MdSportsSoccer } from "react-icons/md";
+import MatchTotalStats from "./MatchTotalStats";
 
-// --- Icons (Inline SVGs to ensure zero external dependencies for this snippet) ---
+// --- Types ---
+type MatchStatType =
+  | "GOAL"
+  | "ASSIST"
+  | "YELLOW_CARD"
+  | "RED_CARD"
+  | "SUBSTITUTION";
+type MatchTeam = "HOME" | "AWAY";
 
-const CheckIcon = ({ className }: { className?: string }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <path d="M20 6 9 17l-5-5" />
-  </svg>
-);
-
-const TrashIcon = ({ className }: { className?: string }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <path d="M3 6h18" />
-    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-  </svg>
-);
-
-const EditIcon = ({ className }: { className?: string }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
-  </svg>
-);
-
-// --- Components ---
-
-interface TimelineItemProps {
-  side: 'left' | 'right';
-  type: 'goal' | 'card';
-  title: string;
-  subtitle: string;
-  showActions?: boolean;
+interface MatchStat {
+  id: number;
+  playerId: number;
+  matchId: number;
+  type: MatchStatType;
+  minute: number;
+  team: MatchTeam;
+  player: { id: number; name: string };
 }
 
-const TimelineItem: React.FC<TimelineItemProps> = ({ side, type, title, subtitle, showActions = true }) => {
-  const isRight = side === 'right';
+// Sample Data
+const dummyMatchStats: MatchStat[] = [
+  {
+    id: 1,
+    matchId: 20220528,
+    playerId: 20,
+    type: "GOAL",
+    minute: 59,
+    team: "AWAY",
+    player: { id: 20, name: "Vincius Junior" },
+  },
+  {
+    id: 2,
+    matchId: 20220528,
+    playerId: 15,
+    type: "ASSIST",
+    minute: 59,
+    team: "AWAY",
+    player: { id: 15, name: "Federico Valverde" },
+  },
+  {
+    id: 3,
+    matchId: 20220528,
+    playerId: 3,
+    type: "YELLOW_CARD",
+    minute: 62,
+    team: "HOME",
+    player: { id: 3, name: "Fabinho" },
+  },
+  {
+    id: 4,
+    matchId: 20220528,
+    playerId: 4,
+    type: "RED_CARD",
+    minute: 75,
+    team: "HOME",
+    player: { id: 4, name: "Virgil van Dijk" },
+  },
+  {
+    id: 5,
+    matchId: 20220528,
+    playerId: 9,
+    type: "SUBSTITUTION",
+    minute: 80,
+    team: "HOME",
+    player: { id: 9, name: "Roberto Firmino" },
+  },
+];
 
-  // Icon Logic
-  let IconComponent;
-  let iconBgColor;
-  let iconColor;
+// --- Timeline Item Component ---
+type TimelineSide = "left" | "right";
+type TimelineType = "goal" | "yellowCard" | "redCard" | "substitution";
 
-  if (type === 'goal') {
-    IconComponent = CheckIcon;
-    iconBgColor = 'bg-green-100'; // Light green circle
-    iconColor = 'text-green-500';  // Darker green check
+interface TimelineItemProps {
+  side: TimelineSide;
+  type: TimelineType;
+  title: string;
+  subtitle: string;
+}
+
+const TimelineItem: React.FC<TimelineItemProps> = ({
+  side,
+  type,
+  title,
+  subtitle,
+}) => {
+  let Icon: React.ComponentType<{ className?: string }>;
+  let iconBg: string;
+  let iconColor = "";
+
+  if (type === "goal") {
+    Icon = MdSportsSoccer;
+    iconBg = "bg-green-100";
+    iconColor = "text-green-500";
+  } else if (type === "yellowCard") {
+    Icon = ({ className }) => (
+      <div className={`h-4 w-3 rounded-sm bg-yellow-400 ${className ?? ""}`} />
+    );
+    iconBg = "bg-yellow-100";
+  } else if (type === "redCard") {
+    Icon = ({ className }) => (
+      <div className={`h-4 w-3 rounded-sm bg-red-500 ${className ?? ""}`} />
+    );
+    iconBg = "bg-red-100";
   } else {
-    // Yellow card representation
-    IconComponent = () => <div className="w-3 h-4 bg-yellow-400 rounded-[1px]" />; 
-    iconBgColor = 'bg-yellow-100';
-    iconColor = ''; 
+    // substitution
+    Icon = ({ className }) => (
+      <div
+        className={`flex h-4 w-4 items-center justify-center rounded-full bg-blue-500 text-[10px] text-white ${className ?? ""}`}
+      >
+        S
+      </div>
+    );
+    iconBg = "bg-blue-100";
   }
 
   return (
-    <div className={`flex items-center w-full mb-8 relative ${isRight ? 'justify-start' : 'justify-end'}`}>
-      
-      {/* The Content Container */}
-      <div className={`w-1/2 flex items-center ${isRight ? 'pl-12 flex-row' : 'pr-12 flex-row-reverse text-right'}`}>
-        
-        {/* Center Dot/Icon Indicator - Absolute positioned on the line */}
-        <div className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 flex items-center justify-center w-10 h-10 rounded-full ${iconBgColor}`}>
-          <div className={iconColor}>
-            <IconComponent className="w-5 h-5" />
+    <div
+      className={`relative mb-8 flex w-full ${side === "left" ? "justify-end" : "justify-start"}`}
+    >
+      <div className="flex w-1/2 items-center gap-4">
+        {/* LEFT SIDE EVENTS */}
+        {side === "left" && (
+          <div className="flex w-full flex-col items-end text-right">
+            <div className="flex items-center gap-5">
+              <div>
+                <h4 className="font-bold text-gray-800">{title}</h4>
+                <p className="text-gray-1 text-sm">{subtitle}</p>
+              </div>
+
+              {/* ACTIONS beside the player */}
+              <div className="space-x-1">
+                <button className="text-blue-400 hover:text-blue-600">
+                  <FiEdit2 className="h-4 w-4" />
+                </button>
+                <button className="text-red-400 hover:text-red-600">
+                  <MdDeleteOutline className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Center Icon (white outer circle so the line does not touch the colored icon) */}
+        <div className="absolute top-1/2 left-1/2 flex h-10 w-10 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white">
+          <div
+            className={`flex h-8 w-8 items-center justify-center rounded-full ${iconBg}`}
+          >
+            <Icon className={`h-5 w-5 ${iconColor}`} />
           </div>
         </div>
 
-        {/* Text Content */}
-        <div className="flex-1">
-          <h4 className="font-bold text-gray-800 text-sm md:text-base">{title}</h4>
-          <p className="text-gray-400 text-xs md:text-sm mt-1">{subtitle}</p>
-        </div>
-
-        {/* Action Buttons (Edit/Delete) */}
-        {showActions && (
-          <div className={`flex items-center gap-3 ${isRight ? 'ml-4' : 'mr-4'}`}>
-             {/* Order swaps based on side to match image */}
-             {isRight ? (
-                <>
-                  <button className="text-blue-400 hover:text-blue-600 transition-colors">
-                    <EditIcon className="w-4 h-4" />
-                  </button>
-                  <button className="text-red-400 hover:text-red-600 transition-colors">
-                    <TrashIcon className="w-4 h-4" />
-                  </button>
-                </>
-             ) : (
-                <>
-                  <button className="text-red-400 hover:text-red-600 transition-colors">
-                    <TrashIcon className="w-4 h-4" />
-                  </button>
-                  <button className="text-blue-400 hover:text-blue-600 transition-colors">
-                    <EditIcon className="w-4 h-4" />
-                  </button>
-                </>
-             )}
+        {/* RIGHT SIDE EVENTS */}
+        {side === "right" && (
+          <div className="flex w-full flex-col items-start">
+            <div className="flex items-center gap-5">
+              {/* ACTIONS beside player */}
+              <div className="space-x-1">
+                <button className="text-red-400 hover:text-red-600">
+                  <MdDeleteOutline className="h-5 w-5" />
+                </button>
+                <button className="text-blue-400 hover:text-blue-600">
+                  <FiEdit2 className="h-4 w-4" />
+                </button>
+              </div>
+              <div>
+                <h4 className="font-bold text-gray-800">{title}</h4>
+                <p className="text-sm text-gray-400">{subtitle}</p>
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -100,104 +179,69 @@ const TimelineItem: React.FC<TimelineItemProps> = ({ side, type, title, subtitle
   );
 };
 
-const StatCard = ({ label, value }: { label: string; value: string | number }) => {
-  return (
-    <div className="border border-gray-100 rounded-lg p-4 bg-white shadow-[0_2px_4px_rgba(0,0,0,0.02)] flex flex-col justify-center">
-      {label && <span className="text-slate-500 font-semibold text-sm mb-2 block">{label}</span>}
-      <span className="text-slate-700 font-bold text-lg">{value}</span>
-    </div>
-  );
-};
+// --- Format Match Stat ---
+const toTimelineProps = (stat: MatchStat): TimelineItemProps => ({
+  side: stat.team === "HOME" ? "right" : "left",
+  type:
+    stat.type === "GOAL" || stat.type === "ASSIST"
+      ? "goal"
+      : stat.type === "YELLOW_CARD"
+        ? "yellowCard"
+        : stat.type === "RED_CARD"
+          ? "redCard"
+          : "substitution",
+  title:
+    stat.type === "GOAL"
+      ? `Goal by ${stat.player.name}`
+      : stat.type === "ASSIST"
+        ? `Assist by ${stat.player.name}`
+        : stat.type === "YELLOW_CARD"
+          ? `Yellow card for ${stat.player.name}`
+          : stat.type === "RED_CARD"
+            ? `Red card for ${stat.player.name}`
+            : `Substitution: ${stat.player.name}`,
+  subtitle: `${stat.minute}' ${
+    stat.team === "HOME" ? "Liverpool" : "Real Madrid"
+  }`,
+});
 
-// --- Main Dashboard Component ---
-
-export default function MatchDashboard() {
+// --- Main Component ---
+export default function LiveTimelineSection() {
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-10 font-sans flex flex-col lg:flex-row gap-6 items-start justify-center">
-      
-      {/* Left Section: Live Timeline */}
-      <div className="w-full lg:w-2/3 bg-white rounded-2xl shadow-sm p-6 md:p-8 relative">
-        <h2 className="text-xl font-bold text-gray-800 mb-10">Live Timeline</h2>
+    <div className="mt-6 flex flex-col gap-6 lg:flex-row lg:items-start">
+      {/* TIMELINE */}
+      <div className="relative w-full rounded-2xl bg-white p-6 shadow md:p-8 lg:w-2/3">
+        <h2 className="mb-10 text-xl font-bold">Live Timeline</h2>
 
         <div className="relative">
-          {/* Vertical Center Line */}
-          <div className="absolute left-1/2 top-0 bottom-0 w-px bg-gray-200 -translate-x-1/2 transform" />
+          {/* Vertical center line */}
+          <div className="bg-gray-2 absolute inset-y-0 left-1/2 w-px -translate-x-1/2" />
 
-          {/* Timeline Group 1 */}
-          <div className="relative z-0">
-            <TimelineItem 
-              side="right" 
-              type="goal" 
-              title="Goal by Kevin De Bruyne" 
-              subtitle="25'Assist by E. Haaland" 
-            />
-            <TimelineItem 
-              side="right" 
-              type="card" 
-              title="Yellow Card for Kevin De Bruyne" 
-              subtitle="25'Assist by E. Haaland" 
-            />
-            <TimelineItem 
-              side="left" 
-              type="goal" 
-              title="Goal by Kevin De Bruyne" 
-              subtitle="25'Assist by E. Haaland" 
-            />
-          </div>
+          {dummyMatchStats.map((s) => (
+            <TimelineItem key={s.id} {...toTimelineProps(s)} />
+          ))}
 
-          {/* Horizontal Divider */}
+          {/* HT divider: mask the vertical line and split the horizontal line into two segments with a gap */}
           <div className="relative z-10 bg-white py-4">
-             <hr className="border-t-2 border-slate-200 w-full" />
+            {/* White mask over the vertical line in this band */}
+            <div className="pointer-events-none absolute top-0 bottom-0 left-1/2 w-6 -translate-x-1/2 bg-white" />
+
+            {/* Two separate horizontal segments with a visible gap in the middle */}
+            <div className="relative flex items-center justify-between gap-4">
+              <div className="bg-gray-2 h-px flex-1" />
+              <div className="w-8" />
+              <div className="bg-gray-2 h-px flex-1" />
+            </div>
           </div>
 
-          {/* Timeline Group 2 (Duplicate for visual match) */}
-          <div className="relative z-0 mt-4">
-             <TimelineItem 
-              side="right" 
-              type="goal" 
-              title="Goal by Kevin De Bruyne" 
-              subtitle="25'Assist by E. Haaland" 
-            />
-            <TimelineItem 
-              side="right" 
-              type="card" 
-              title="Yellow Card for Kevin De Bruyne" 
-              subtitle="25'Assist by E. Haaland" 
-            />
-            <TimelineItem 
-              side="left" 
-              type="goal" 
-              title="Goal by Kevin De Bruyne" 
-              subtitle="25'Assist by E. Haaland" 
-            />
-          </div>
+          {dummyMatchStats.map((s) => (
+            <TimelineItem key={`${s.id}-dup`} {...toTimelineProps(s)} />
+          ))}
         </div>
       </div>
 
-      {/* Right Section: Stats */}
-      <div className="w-full lg:w-1/3 bg-white rounded-2xl shadow-sm p-6 md:p-8">
-        <h2 className="text-xl font-bold text-gray-800 mb-6">Stats</h2>
-        
-        <div className="grid grid-cols-2 gap-4">
-          <StatCard label="Shots APR" value="0" />
-          <StatCard label="Shots RAY" value="0" />
-          
-          <StatCard label="Corner APR" value="0" />
-          <StatCard label="Corner RAY" value="0" />
-          
-          {/* The bottom two inputs in the image appear to have placeholder style or empty labels */}
-          <div className="col-span-1">
-             <StatCard label="" value="0" />
-          </div>
-           <div className="col-span-1">
-             <div className="border border-gray-100 rounded-lg p-4 bg-white shadow-[0_2px_4px_rgba(0,0,0,0.02)] flex flex-col justify-center h-full">
-                <span className="text-slate-500 font-semibold text-sm mb-2 block">Shots</span>
-                <span className="text-slate-700 font-bold text-lg">0</span>
-             </div>
-          </div>
-        </div>
-      </div>
-
+      {/* STATS */}
+      <MatchTotalStats />
     </div>
   );
 }

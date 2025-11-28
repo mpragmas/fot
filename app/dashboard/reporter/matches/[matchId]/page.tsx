@@ -1,10 +1,7 @@
-"use client";
-
-import React, { useState } from "react";
 import MatchReportHeader from "./_components/MatchReportHeader";
 import MatchRecordEvents from "./_components/MatchRecordEvents";
 import MatchVenue from "./_components/MatchVenue";
-import MatchDashboard from "./_components/MatchDashboard";
+import LiveTimelineSection from "./_components/LiveTimelineSection";
 
 export default function MatchControlPage() {
   return (
@@ -14,7 +11,7 @@ export default function MatchControlPage() {
         <MatchRecordEvents />
         <MatchVenue />
       </div>
-      <MatchDashboard />
+      <LiveTimelineSection />
     </div>
   );
 }

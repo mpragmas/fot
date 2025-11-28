@@ -9,7 +9,7 @@ const nav = [
   },
   {
     name: "Players and Coaches",
-    href: "/dashboard/reporter/players-and-coaches",
+    href: "/dashboard/reporter/players_coaches",
     icon: <GrNotes />,
   },
   {
