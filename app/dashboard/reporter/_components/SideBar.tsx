@@ -18,8 +18,13 @@ const nav = [
     icon: <IoPersonSharp />,
   },
   {
+    name: "Matches",
+    href: "/dashboard/reporter/matches",
+    icon: <IoPersonSharp />,
+  },
+  {
     name: "News Articles",
-    href: "/dashboard/reporter/news-articles",
+    href: "/dashboard/reporter/news",
     icon: <GrNotes />,
   },
   {
@@ -40,13 +45,13 @@ const SideBar = () => {
         </div>
       </div>
 
-      <p className="text-gray-1 mb-4 text-xs font-semibold">Navigation</p>
-      <nav className="space-y-2">
+      <p className="text-gray-1 mb-4 text-xs font-normal">Navigation</p>
+      <nav className="space-y-1">
         {nav.map((item) => (
           <a
             key={item.name}
             href={item.href}
-            className="hover:bg-gray-2/50 flex items-center gap-2 p-2 transition-colors"
+            className="hover:bg-gray-2/50 flex items-center gap-2 p-1 transition-colors"
           >
             <span className="">{item.icon}</span> {item.name}
           </a>
