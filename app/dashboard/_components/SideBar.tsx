@@ -1,40 +1,16 @@
 import React from "react";
 import { IoHome, IoPersonSharp } from "react-icons/io5";
 import { GrNotes } from "react-icons/gr";
-const nav = [
-  {
-    name: "Dashboard",
-    href: "/dashboard/reporter",
-    icon: <IoHome />,
-  },
-  {
-    name: "Players and Coaches",
-    href: "/dashboard/reporter/players_coaches",
-    icon: <GrNotes />,
-  },
-  {
-    name: "Transfers",
-    href: "/dashboard/reporter/transfers",
-    icon: <IoPersonSharp />,
-  },
-  {
-    name: "Matches",
-    href: "/dashboard/reporter/matches",
-    icon: <IoPersonSharp />,
-  },
-  {
-    name: "News Articles",
-    href: "/dashboard/reporter/news",
-    icon: <GrNotes />,
-  },
-  {
-    name: "Profile",
-    href: "/dashboard/reporter/profile",
-    icon: <IoPersonSharp />,
-  },
-];
 
-const SideBar = () => {
+interface SideBarProps {
+  nav: {
+    name: string;
+    href: string;
+    icon: React.ReactNode;
+  }[];
+}
+
+const SideBar = ({ nav }: SideBarProps) => {
   return (
     <aside className="text-dark bg-light-0 border-gray-2 border-r px-6 py-3">
       <div className="mb-8 flex items-center gap-2">
