@@ -48,7 +48,7 @@ export function useReporterMatches() {
     queryKey: ["matches", reporterId],
     queryFn: () => fetchReporterMatches(reporterId),
     enabled: !!reporterId,
-    staleTime: 1000 * 60 * 2, // 2 mins, excessive re-fetching
+    staleTime: 1000 * 60 * 2, // 2 mins, prevents excessive re-fetching
   });
 
   useMatchStatusSocket(reporterId);
