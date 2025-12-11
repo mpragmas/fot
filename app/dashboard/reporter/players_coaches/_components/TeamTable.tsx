@@ -1,21 +1,46 @@
-import React from "react";
+"use client";
 
-type Team = {
-  name: string;
-  league: string;
-  coach: string;
-  playersCount: number;
-  location: string;
-};
-const teams: Team[] = Array.from({ length: 4 }).map(() => ({
-  name: "APR FC",
-  league: "Premier League",
-  coach: "Mugiraneza",
-  playersCount: 27,
-  location: "Kigali",
-}));
+import React, { useState } from "react";
+import { useDeleteTeam, useTeams } from "@/app/hooks/useTeams";
+import { useLeagues } from "@/app/hooks/useLeagues";
+import TeamTableSkeleton from "./TeamTableSkeleton";
+import AddTeamModal from "./AddTeamModal";
+import EditTeamModal from "./EditTeamModal";
+import ConfirmDeleteModal from "./ConfirmDeleteModal";
+import TablePagination from "./TablePagination";
 
 const TeamTable = () => {
+  const [selectedLeagueId, setSelectedLeagueId] = useState<number | "">("");
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [editingTeamId, setEditingTeamId] = useState<number | null>(null);
+  const [deletingTeamId, setDeletingTeamId] = useState<number | null>(null);
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
+
+  const { leagues } = useLeagues();
+  const { teams, total, isLoading, isError } = useTeams({
+    leagueId:
+      typeof selectedLeagueId === "number" ? selectedLeagueId : undefined,
+    page,
+    pageSize,
+  });
+  const deleteTeam = useDeleteTeam();
+
+  if (isLoading) {
+    return <TeamTableSkeleton />;
+  }
+
+  if (isError) {
+    return (
+      <div className="border-gray-2 mt-6 rounded-xl border">
+        <div className="px-6 py-5">
+          <h2 className="text-lg font-semibold">Teams</h2>
+          <p className="mt-2 text-sm text-red-500">Failed to load teams.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="border-gray-2 mt-6 rounded-xl border">
       <div className="px-6 py-5">
@@ -30,18 +55,26 @@ const TeamTable = () => {
             <select
               className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 shadow-sm transition-all hover:border-gray-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 focus:outline-none"
               aria-label="league"
+              value={selectedLeagueId}
+              onChange={(e) =>
+                setSelectedLeagueId(
+                  e.target.value ? Number(e.target.value) : "",
+                )
+              }
             >
-              <option>League</option>
+              <option value="">All leagues</option>
+              {leagues.map((league) => (
+                <option key={league.id} value={league.id}>
+                  {league.name}
+                </option>
+              ))}
             </select>
 
-            <select
-              className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 shadow-sm transition-all hover:border-gray-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 focus:outline-none"
-              aria-label="all"
+            <button
+              className="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all hover:bg-sky-700 hover:shadow-md focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 focus:outline-none"
+              type="button"
+              onClick={() => setIsAddOpen(true)}
             >
-              <option>All</option>
-            </select>
-
-            <button className="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all hover:bg-sky-700 hover:shadow-md focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 focus:outline-none">
               + Add Team
             </button>
           </div>
@@ -69,7 +102,9 @@ const TeamTable = () => {
                 className="border-b border-gray-100 odd:bg-white even:bg-white hover:bg-gray-50"
               >
                 <td className="px-6 py-5 text-sm text-gray-800">{t.name}</td>
-                <td className="px-6 py-5 text-sm text-gray-600">{t.league}</td>
+                <td className="px-6 py-5 text-sm text-gray-600">
+                  {t.leagueName}
+                </td>
                 <td className="px-6 py-5 text-sm text-gray-600">{t.coach}</td>
                 <td className="px-6 py-5 text-sm text-gray-600">
                   {t.playersCount}
@@ -86,6 +121,8 @@ const TeamTable = () => {
                       aria-label="edit"
                       className="rounded p-1 hover:bg-gray-100"
                       title="Edit"
+                      type="button"
+                      onClick={() => setEditingTeamId(t.id)}
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -108,6 +145,8 @@ const TeamTable = () => {
                       aria-label="delete"
                       className="rounded p-1 hover:bg-gray-100"
                       title="Delete"
+                      type="button"
+                      onClick={() => setDeletingTeamId(t.id)}
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -131,6 +170,31 @@ const TeamTable = () => {
           </tbody>
         </table>
       </div>
+      <TablePagination
+        page={page}
+        pageSize={pageSize}
+        total={total}
+        onPageChange={setPage}
+      />
+      <AddTeamModal open={isAddOpen} onClose={() => setIsAddOpen(false)} />
+      <EditTeamModal
+        open={editingTeamId != null}
+        team={teams.find((t) => t.id === editingTeamId) ?? null}
+        onClose={() => setEditingTeamId(null)}
+      />
+      <ConfirmDeleteModal
+        open={deletingTeamId != null}
+        title="Delete team"
+        description="Are you sure you want to delete this team? This action cannot be undone."
+        onCancel={() => setDeletingTeamId(null)}
+        loading={deleteTeam.isPending}
+        onConfirm={() => {
+          if (deletingTeamId == null) return;
+          deleteTeam.mutate(deletingTeamId, {
+            onSettled: () => setDeletingTeamId(null),
+          });
+        }}
+      />
     </div>
   );
 };

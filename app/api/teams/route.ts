@@ -20,7 +20,10 @@ export async function GET(req: NextRequest) {
     const [data, total] = await Promise.all([
       prisma.team.findMany({
         ...queryOptions,
-        include: { league: true },
+        include: {
+          league: true,
+          _count: { select: { players: true } },
+        },
       }),
       prisma.team.count({ where: queryOptions.where }),
     ]);

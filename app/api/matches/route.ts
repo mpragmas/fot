@@ -54,17 +54,35 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { fixtureId, status, reporterId } = body;
+    const { fixtureId, status, reporterId } = validation.data;
 
-    const match = await prisma.match.create({
-      data: {
+    // Each fixture can only have one match (fixtureId is unique on Match).
+    // Use a single upsert to avoid race conditions between find/create.
+    const match = await prisma.match.upsert({
+      where: { fixtureId },
+      update: {
+        status: status ?? undefined,
+        ...(reporterId
+          ? { reporter: { connect: { id: reporterId } } }
+          : { reporter: { disconnect: true } }),
+      },
+      create: {
         fixture: { connect: { id: fixtureId } },
         status: status ?? undefined,
-        reporter: reporterId ? { connect: { id: reporterId } } : undefined,
+        ...(reporterId ? { reporter: { connect: { id: reporterId } } } : {}),
       },
     });
+    try {
+      await fetch("http://localhost:4000/match-updated", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: match.id, status: match.status }),
+      });
+    } catch (notifyError) {
+      console.error("Failed to notify socket server", notifyError);
+    }
 
-    return NextResponse.json(match, { status: 201 });
+    return NextResponse.json(match, { status: 200 });
   } catch (e: any) {
     return handleError(e, "Failed to create match");
   }

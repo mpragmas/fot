@@ -1,30 +1,102 @@
+"use client";
+
 import React from "react";
+import {
+  ReporterMatchItem,
+  useReporterMatches,
+} from "@/app/hooks/userReporterMatchs";
 
-const matches = [
-  {
-    id: 1,
-    teams: "APR vs RAY",
-    date: "10/12/2025, 6:00 PM",
-    stadium: "Amahoro Stadium",
-    status: "Upcoming",
-  },
-  {
-    id: 2,
-    teams: "APR vs RAY",
-    date: "10/12/2025, 6:00 PM",
-    stadium: "Amahoro Stadium",
-    status: "Live",
-  },
-  {
-    id: 3,
-    teams: "APR vs RAY",
-    date: "10/12/2025, 6:00 PM",
-    stadium: "Amahoro Stadium",
-    status: "Upcoming",
-  },
-];
+type MatchRowProps = {
+  match: ReporterMatchItem;
+};
 
-const AssigneeMatchtable = () => {
+const MatchRow = React.memo(({ match }: MatchRowProps) => {
+  const isLive = match.status === "LIVE";
+
+  return (
+    <tr className="border-gray-2 border-b hover:bg-gray-50">
+      <td className="py-3 text-left">
+        {match.homeTeamName} vs {match.awayTeamName}
+      </td>
+
+      <td className="py-3 text-left">{match.dateFormatted}</td>
+
+      <td className="py-3 text-left">{match.stadium || "-"}</td>
+
+      <td className="py-3 text-left">
+        <span
+          className={`rounded-full px-3 py-1 text-sm ${
+            isLive ? "bg-red-2 text-red-1" : "bg-blue-3 text-blue-2"
+          }`}
+        >
+          {match.status}
+        </span>
+      </td>
+
+      <td className="py-3 text-right">
+        {isLive ? (
+          <button className="text-blue-2 bg-blue-3 rounded px-4 py-2">
+            View Match
+          </button>
+        ) : (
+          <div className="flex items-center justify-end gap-2">
+            <button className="border-blue-2 text-blue-2 rounded border px-4 py-2">
+              Lineup
+            </button>
+            <button className="bg-blue-2 text-whitish rounded px-4 py-2">
+              Start Match
+            </button>
+          </div>
+        )}
+      </td>
+    </tr>
+  );
+});
+
+const AssignedMatchtable: React.FC = () => {
+  const { matches, isLoading, isError, error, hasReporter } =
+    useReporterMatches();
+
+  // if (!hasReporter)
+  //   return (
+  //     <p className="text-sm text-gray-500">
+  //       No reporter profile found for this user.
+  //     </p>
+  //   );
+
+  if (isLoading) {
+    return (
+      <div className="mt-4 overflow-x-auto rounded-lg border bg-white p-4">
+        <div className="mb-2 h-4 w-32 animate-pulse rounded bg-gray-200" />
+        <div className="mt-2 space-y-2">
+          {[1, 2, 3].map((key) => (
+            <div
+              key={key}
+              className="flex items-center justify-between gap-4 rounded bg-gray-50 p-3"
+            >
+              <div className="h-4 w-40 animate-pulse rounded bg-gray-200" />
+              <div className="h-4 w-32 animate-pulse rounded bg-gray-200" />
+              <div className="h-4 w-24 animate-pulse rounded bg-gray-200" />
+              <div className="h-6 w-16 animate-pulse rounded-full bg-gray-200" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (isError)
+    return (
+      <p className="text-sm text-red-500">
+        Failed to load matches: {error instanceof Error ? error.message : ""}
+      </p>
+    );
+
+  if (matches.length === 0)
+    return (
+      <p className="text-sm text-gray-500">You have no assigned matches yet.</p>
+    );
+
   return (
     <div className="bg-whitish border-gray-2 mx-8 my-4 rounded-xl border-2 p-6 px-8 py-4">
       <div className="mb-4 flex items-center justify-between">
@@ -33,6 +105,7 @@ const AssigneeMatchtable = () => {
           Upcoming and live
         </span>
       </div>
+
       <table className="w-full border-collapse text-left">
         <thead>
           <tr className="text-gray-1 border-gray-2 border-b">
@@ -43,43 +116,10 @@ const AssigneeMatchtable = () => {
             <th className="py-2 text-right">Action</th>
           </tr>
         </thead>
+
         <tbody>
           {matches.map((match) => (
-            <tr
-              key={match.id}
-              className="border-gray-2 border-b hover:bg-gray-50"
-            >
-              <td className="py-3 text-left">{match.teams}</td>
-              <td className="py-3 text-left">{match.date}</td>
-              <td className="py-3 text-left">{match.stadium}</td>
-              <td className="py-3 text-left">
-                <span
-                  className={`rounded-full px-3 py-1 text-sm ${
-                    match.status === "Live"
-                      ? "bg-red-2 text-red-1"
-                      : "bg-blue-3 text-blue-2"
-                  }`}
-                >
-                  {match.status}
-                </span>
-              </td>
-              <td className="py-3 text-right">
-                {match.status === "Live" ? (
-                  <button className="text-blue-2 bg-blue-3 rounded px-4 py-2">
-                    View Match
-                  </button>
-                ) : (
-                  <div className="flex items-center justify-end gap-2">
-                    <button className="border-blue-2 text-blue-2 rounded border px-4 py-2">
-                      Lineup
-                    </button>
-                    <button className="bg-blue-2 text-whitish rounded px-4 py-2">
-                      Start Match
-                    </button>
-                  </div>
-                )}
-              </td>
-            </tr>
+            <MatchRow key={match.id} match={match} />
           ))}
         </tbody>
       </table>
@@ -87,4 +127,4 @@ const AssigneeMatchtable = () => {
   );
 };
 
-export default AssigneeMatchtable;
+export default AssignedMatchtable;

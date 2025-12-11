@@ -86,7 +86,23 @@ export async function DELETE(
       return NextResponse.json({ error: "Invalid id" }, { status: 400 });
     }
 
-    await prisma.fixture.delete({ where: { id } });
+    await prisma.$transaction(async (tx) => {
+      // Find the match for this fixture, if any.
+      const match = await tx.match.findUnique({
+        where: { fixtureId: id },
+        select: { id: true },
+      });
+
+      if (match) {
+        // Delete all match-related data first to satisfy FK constraints.
+        await tx.lineup.deleteMany({ where: { matchId: match.id } });
+        await tx.matchStat.deleteMany({ where: { matchId: match.id } });
+        await tx.match.delete({ where: { id: match.id } });
+      }
+
+      await tx.fixture.delete({ where: { id } });
+    });
+
     return NextResponse.json({ success: true });
   } catch (e: any) {
     return handleError(e, "Failed to delete fixture", {

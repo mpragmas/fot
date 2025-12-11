@@ -3,6 +3,7 @@ import prisma from "@/app/lib/prisma";
 import { buildQueryOptions } from "@/app/lib/buildQueryOptions";
 import { handleError } from "@/app/lib/routeError";
 import { fixtureSchema } from "@/app/lib/validationSchema";
+import { createInitialMatch } from "@/app/lib/matchService";
 
 export async function GET(req: NextRequest) {
   try {
@@ -18,7 +19,21 @@ export async function GET(req: NextRequest) {
 
     const data = await prisma.fixture.findMany({
       ...queryOptions,
-      include: { season: true, homeTeam: true, awayTeam: true, match: true },
+      include: {
+        season: true,
+        homeTeam: true,
+        awayTeam: true,
+        match: {
+          include: {
+            reporter: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
+      },
     });
 
     return NextResponse.json(data);
@@ -50,6 +65,9 @@ export async function POST(req: NextRequest) {
         referee: body.referee ?? null,
       },
     });
+
+    // Create the initial Match container for this fixture (status defaults to UPCOMING).
+    await createInitialMatch(fixture.id);
 
     return NextResponse.json(fixture, { status: 201 });
   } catch (e: any) {
