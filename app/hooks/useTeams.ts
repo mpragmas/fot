@@ -168,29 +168,29 @@ export function useUpdateTeam() {
   });
 }
 
-export function useDeleteTeam() {
+export function useDeactivateTeam() {
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
 
   return useMutation({
     mutationFn: async (id: number) => {
-      const res = await fetch(`/api/teams/${id}`, {
-        method: "DELETE",
+      const res = await fetch(`/api/teams/${id}/deactivate`, {
+        method: "POST",
       });
 
       if (!res.ok) {
         const error = await res.json().catch(() => ({}));
-        throw new Error(error?.error || "Failed to delete team");
+        throw new Error(error?.error || "Failed to deactivate team");
       }
 
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["teams"] });
-      showSuccess("Team deleted successfully");
+      showSuccess("Team deactivated successfully");
     },
     onError: (err: any) => {
-      showError(err?.message || "Failed to delete team");
+      showError(err?.message || "Failed to deactivate team");
     },
   });
 }

@@ -8,17 +8,21 @@ type ApiPlayer = {
   id: number;
   firstName: string;
   lastName: string | null;
+  age: number | null;
   position: string;
   number: number;
-  teamId: number;
+  teamId: number | null;
+  team?: { leagueId: number };
 };
 
 export type Player = {
   id: number;
   fullName: string;
   position: string;
+  age: number | null;
   number: number;
-  teamId: number;
+  teamId: number | null;
+  leagueId?: number;
 };
 
 interface PlayersResponse {
@@ -73,8 +77,10 @@ export function usePlayers(options: PlayersQueryOptions) {
         id: p.id,
         fullName: p.lastName ? `${p.firstName} ${p.lastName}` : p.firstName,
         position: p.position,
+        age: p.age,
         number: p.number,
         teamId: p.teamId,
+        leagueId: p.team?.leagueId,
       })) ?? [],
     total: query.data?.total ?? 0,
     isLoading: query.isLoading,
@@ -87,8 +93,9 @@ interface CreatePlayerInput {
   firstName: string;
   lastName?: string;
   position: string;
-  number: number;
-  teamId: number;
+  age?: number;
+  number?: number | null;
+  teamId?: number | null;
 }
 
 export function useCreatePlayer() {
@@ -104,8 +111,11 @@ export function useCreatePlayer() {
       });
 
       if (!res.ok) {
-        const error = await res.json().catch(() => ({}));
-        throw new Error(error?.error || "Failed to create player");
+        const errorData = await res.json().catch(() => ({}));
+        const errorMessage = typeof errorData?.error === "string" 
+          ? errorData.error 
+          : JSON.stringify(errorData?.error || "Failed to create player");
+        throw new Error(errorMessage);
       }
 
       return res.json();
@@ -125,8 +135,9 @@ interface UpdatePlayerInput {
   firstName?: string;
   lastName?: string;
   position?: string;
-  number?: number;
-  teamId?: number;
+  age?: number;
+  number?: number | null;
+  teamId?: number | null;
 }
 
 export function useUpdatePlayer() {
@@ -143,8 +154,11 @@ export function useUpdatePlayer() {
       });
 
       if (!res.ok) {
-        const error = await res.json().catch(() => ({}));
-        throw new Error(error?.error || "Failed to update player");
+        const errorData = await res.json().catch(() => ({}));
+        const errorMessage = typeof errorData?.error === "string" 
+          ? errorData.error 
+          : JSON.stringify(errorData?.error || "Failed to update player");
+        throw new Error(errorMessage);
       }
 
       return res.json();

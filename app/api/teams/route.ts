@@ -17,15 +17,21 @@ export async function GET(req: NextRequest) {
       ],
     });
 
+    const where = {
+      ...queryOptions.where,
+      isActive: true,
+    };
+
     const [data, total] = await Promise.all([
       prisma.team.findMany({
         ...queryOptions,
+        where,
         include: {
           league: true,
           _count: { select: { players: true } },
         },
       }),
-      prisma.team.count({ where: queryOptions.where }),
+      prisma.team.count({ where }),
     ]);
 
     return NextResponse.json({ total, data });

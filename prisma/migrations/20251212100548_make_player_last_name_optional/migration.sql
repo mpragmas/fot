@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Player" ALTER COLUMN "lastName" DROP NOT NULL,
+ALTER COLUMN "number" DROP NOT NULL;

@@ -66,6 +66,21 @@ export async function PATCH(
   }
 }
 
+async function deactivateTeamById(id: number) {
+  // Make all players of this team unemployed by clearing their teamId
+  await prisma.player.updateMany({
+    where: { teamId: id },
+    data: { teamId: null },
+  });
+
+  const team = await prisma.team.update({
+    where: { id },
+    data: { isActive: false, deactivatedAt: new Date() },
+  });
+
+  return team;
+}
+
 export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
@@ -77,7 +92,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Invalid id" }, { status: 400 });
     }
 
-    await prisma.team.delete({ where: { id } });
+    await deactivateTeamById(id);
     return NextResponse.json({ success: true });
   } catch (e: any) {
     return handleError(e, "Failed to delete team", {

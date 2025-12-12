@@ -4,16 +4,18 @@ export const playerSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required").optional(),
   position: z.string().min(1, "Position is required"),
-  number: z.number().min(1, "Number is required"),
-  teamId: z.number().min(1, "Team is required"),
+  age: z.number().int().min(1, "Age must be positive").optional(),
+  number: z.number().min(1, "Number is required").nullable().optional(),
+  teamId: z.number().min(1, "Team is required").nullable().optional(),
 });
 
 export const patchPlayerSchema = z.object({
   firstName: z.string().optional(),
   lastName: z.string().optional(),
   position: z.string().optional(),
-  number: z.number().optional(),
-  teamId: z.number().optional(),
+  age: z.number().int().min(1).optional(),
+  number: z.number().nullable().optional(),
+  teamId: z.number().nullable().optional(),
 });
 
 export const leagueSchema = z.object({

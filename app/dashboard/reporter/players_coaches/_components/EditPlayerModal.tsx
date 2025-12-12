@@ -3,6 +3,7 @@
 import React, { useEffect, useState, FormEvent } from "react";
 import BaseModal from "@/app/components/BaseModal";
 import { useTeams } from "@/app/hooks/useTeams";
+import { useLeagues } from "@/app/hooks/useLeagues";
 import { Player, useUpdatePlayer } from "@/app/hooks/usePlayers";
 
 interface EditPlayerModalProps {
@@ -12,12 +13,17 @@ interface EditPlayerModalProps {
 }
 
 const EditPlayerModal = ({ open, player, onClose }: EditPlayerModalProps) => {
-  const { teams } = useTeams();
+  const [leagueId, setLeagueId] = useState<number | "">("");
+  const { teams } = useTeams(
+    leagueId ? { leagueId: Number(leagueId), pageSize: 100 } : undefined,
+  );
+  const { leagues } = useLeagues();
   const updatePlayer = useUpdatePlayer();
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [position, setPosition] = useState("");
+  const [age, setAge] = useState<number | "">("");
   const [number, setNumber] = useState<number | "">("");
   const [teamId, setTeamId] = useState<number | "">("");
 
@@ -27,22 +33,25 @@ const EditPlayerModal = ({ open, player, onClose }: EditPlayerModalProps) => {
       setFirstName(first || "");
       setLastName(rest.join(" "));
       setPosition(player.position);
-      setNumber(player.number);
-      setTeamId(player.teamId);
+      setAge(player.age ?? "");
+      setNumber(player.number ?? ""); // Fallback to empty string for input
+      setTeamId(player.teamId ?? "");
+      setLeagueId(player.leagueId ?? "");
     }
   }, [player]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!player || !firstName || !position || !number || !teamId) return;
+    if (!player || !firstName || !position) return;
 
     await updatePlayer.mutateAsync({
       id: player.id,
       firstName,
       lastName: lastName || undefined,
       position,
-      number: Number(number),
-      teamId: Number(teamId),
+      age: age ? Number(age) : undefined,
+      number: number ? Number(number) : null,
+      teamId: teamId ? Number(teamId) : null,
     });
 
     onClose();
@@ -95,6 +104,20 @@ const EditPlayerModal = ({ open, player, onClose }: EditPlayerModalProps) => {
             />
           </div>
           <div>
+            <label className="mb-1 block text-sm font-medium">Age</label>
+            <input
+              type="number"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 focus:outline-none"
+              value={age}
+              onChange={(e) =>
+                setAge(e.target.value ? Number(e.target.value) : "")
+              }
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
             <label className="mb-1 block text-sm font-medium">Number</label>
             <input
               type="number"
@@ -103,28 +126,47 @@ const EditPlayerModal = ({ open, player, onClose }: EditPlayerModalProps) => {
               onChange={(e) =>
                 setNumber(e.target.value ? Number(e.target.value) : "")
               }
-              required
             />
           </div>
         </div>
 
-        <div>
-          <label className="mb-1 block text-sm font-medium">Team</label>
-          <select
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 focus:outline-none"
-            value={teamId}
-            onChange={(e) =>
-              setTeamId(e.target.value ? Number(e.target.value) : "")
-            }
-            required
-          >
-            <option value="">Select team</option>
-            {teams.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
-            ))}
-          </select>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="mb-1 block text-sm font-medium">League</label>
+            <select
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 focus:outline-none"
+              value={leagueId}
+              onChange={(e) => {
+                setLeagueId(e.target.value ? Number(e.target.value) : "");
+                setTeamId(""); // Reset team when league changes
+              }}
+            >
+              <option value="">All Leagues</option>
+              {leagues.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium">Team</label>
+            <select
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 focus:outline-none"
+              value={teamId}
+              onChange={(e) =>
+                setTeamId(e.target.value ? Number(e.target.value) : "")
+              }
+              disabled={!leagueId}
+            >
+              <option value="">Select team</option>
+              {teams.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         <div className="mt-4 flex justify-end gap-2">

@@ -109,6 +109,8 @@ model Team {
   fromTransfers    Transfer[] @relation("FromTransfers")
   toTransfers      Transfer[] @relation("ToTransfers")
   proposedTransfers ProposedTransfer[]
+  isActive         Boolean   @default(true)
+  deactivatedAt    DateTime?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 }
@@ -116,11 +118,12 @@ model Team {
 model Player {
   id           Int       @id @default(autoincrement())
   firstName    String
-  lastName     String
+  lastName     String?
   position     String
-  number       Int
-  team         Team      @relation(fields: [teamId], references: [id])
-  teamId       Int
+  age          Int?
+  number       Int?
+  team         Team?     @relation(fields: [teamId], references: [id])
+  teamId       Int?
   stats        PlayerStat[]
   lineups      Lineup[]
   matchStats   MatchStat[]

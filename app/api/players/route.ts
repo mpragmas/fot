@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
 
     // Fetch both players and total for pagination support
     const [players, total] = await Promise.all([
-      prisma.player.findMany(queryOptions),
+      prisma.player.findMany({ ...queryOptions, include: { team: true } }),
       prisma.player.count({ where: queryOptions.where }),
     ]);
 
@@ -49,8 +49,9 @@ export async function POST(req: NextRequest) {
         firstName: body.firstName,
         lastName: body.lastName,
         position: body.position,
+        age: body.age,
         number: body.number,
-        teamId: body.teamId,
+        teamId: body.teamId ?? null,
       },
     });
 

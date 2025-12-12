@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { useDeleteTeam, useTeams } from "@/app/hooks/useTeams";
+import { useDeactivateTeam, useTeams } from "@/app/hooks/useTeams";
 import { useLeagues } from "@/app/hooks/useLeagues";
 import TeamTableSkeleton from "./TeamTableSkeleton";
 import AddTeamModal from "./AddTeamModal";
@@ -24,7 +24,7 @@ const TeamTable = () => {
     page,
     pageSize,
   });
-  const deleteTeam = useDeleteTeam();
+  const deactivateTeam = useDeactivateTeam();
 
   if (isLoading) {
     return <TeamTableSkeleton />;
@@ -140,11 +140,11 @@ const TeamTable = () => {
                       </svg>
                     </button>
 
-                    {/* Trash / Delete icon */}
+                    {/* Trash / Deactivate icon */}
                     <button
-                      aria-label="delete"
+                      aria-label="deactivate"
                       className="rounded p-1 hover:bg-gray-100"
-                      title="Delete"
+                      title="Deactivate"
                       type="button"
                       onClick={() => setDeletingTeamId(t.id)}
                     >
@@ -184,13 +184,13 @@ const TeamTable = () => {
       />
       <ConfirmDeleteModal
         open={deletingTeamId != null}
-        title="Delete team"
-        description="Are you sure you want to delete this team? This action cannot be undone."
+        title="Deactivate team"
+        description="Are you sure you want to deactivate this team? Existing matches will keep their history, but this team will no longer appear in future selections."
         onCancel={() => setDeletingTeamId(null)}
-        loading={deleteTeam.isPending}
+        loading={deactivateTeam.isPending}
         onConfirm={() => {
           if (deletingTeamId == null) return;
-          deleteTeam.mutate(deletingTeamId, {
+          deactivateTeam.mutate(deletingTeamId, {
             onSettled: () => setDeletingTeamId(null),
           });
         }}

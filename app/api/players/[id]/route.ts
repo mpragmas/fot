@@ -46,7 +46,7 @@ export async function PATCH(
       );
     }
 
-    const { firstName, lastName, position, number, teamId } = validation.data;
+    const { firstName, lastName, position, age, number, teamId } = validation.data;
 
     const player = await prisma.player.update({
       where: { id },
@@ -54,6 +54,7 @@ export async function PATCH(
         ...(firstName !== undefined ? { firstName } : {}),
         ...(lastName !== undefined ? { lastName } : {}),
         ...(position !== undefined ? { position } : {}),
+        ...(age !== undefined ? { age } : {}),
         ...(number !== undefined ? { number } : {}),
         ...(teamId !== undefined ? { teamId } : {}),
       },
