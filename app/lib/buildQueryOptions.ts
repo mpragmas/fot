@@ -1,3 +1,14 @@
+// Helper to build nested object from path "a.b.c"
+const setNestedValue = (obj: any, path: string, value: any) => {
+  const keys = path.split(".");
+  let current = obj;
+  for (let i = 0; i < keys.length - 1; i++) {
+    current[keys[i]] = current[keys[i]] || {};
+    current = current[keys[i]];
+  }
+  current[keys[keys.length - 1]] = value;
+};
+
 export function buildQueryOptions(
   searchParams: URLSearchParams,
   config: any = {},
@@ -11,33 +22,44 @@ export function buildQueryOptions(
     if (!value) continue;
 
     if (field.type === "number") {
-      where[field.name] = Number(value);
+      setNestedValue(where, field.name, Number(value));
     } else if (field.type === "string") {
-      where[field.name] = value;
+      setNestedValue(where, field.name, value);
     } else if (field.type === "search") {
-      where.OR = field.fields.map((f: string) => ({
-        [f]: { contains: value, mode: "insensitive" },
-      }));
+      // For search, we typically check multiple fields with OR
+      // Example: OR: [ { fixture: { homeTeam: { name: ... } } }, ... ]
+      const searchConditions = field.fields.map((f: string) => {
+        const condition = {};
+        setNestedValue(condition, f, { contains: value, mode: "insensitive" });
+        return condition;
+      });
+      where.OR = searchConditions;
     } else if (field.type === "range") {
-      where[field.name] = {};
+      const rangeCondition: any = {};
       const min = searchParams.get(field.min);
       const max = searchParams.get(field.max);
-      if (min) where[field.name].gte = Number(min);
-      if (max) where[field.name].lte = Number(max);
+      if (min) rangeCondition.gte = Number(min);
+      if (max) rangeCondition.lte = Number(max);
+
+      if (Object.keys(rangeCondition).length > 0) {
+        setNestedValue(where, field.name, rangeCondition);
+      }
     }
   }
 
-  // ordering
+  // Ordering
   const orderByField = searchParams.get("orderBy") || "id";
   const order = searchParams.get("order") || "desc";
+  const orderBy = {};
+  setNestedValue(orderBy, orderByField, order);
 
-  // pagination
+  // Pagination
   const takeParam = searchParams.get("take");
   const skipParam = searchParams.get("skip");
 
   return {
     where,
-    orderBy: { [orderByField]: order },
+    orderBy,
     take: takeParam ? Number(takeParam) : undefined,
     skip: skipParam ? Number(skipParam) : undefined,
   };

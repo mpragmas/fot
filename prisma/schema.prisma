@@ -28,6 +28,15 @@ enum MatchStatus {
   COMPLETED
 }
 
+enum MatchPhase {
+  PRE
+  FIRST_HALF
+  HT
+  SECOND_HALF
+  ET
+  FT
+}
+
 enum StatType {
   GOAL
   ASSIST
@@ -154,6 +163,10 @@ model Match {
   fixture     Fixture   @relation(fields: [fixtureId], references: [id])
   fixtureId   Int       @unique
   status      MatchStatus @default(UPCOMING)
+  // Authoritative clock state
+  phase              MatchPhase @default(PRE)
+  elapsedSeconds     Int        @default(0)
+  clockStartedAt     DateTime?
   reporter    User?     @relation("ReporterMatches", fields: [reporterId], references: [id])
   reporterId  Int?
   lineups     Lineup[]

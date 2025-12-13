@@ -143,6 +143,7 @@ const PlayerTable = () => {
               <th className="w-2/5 px-6 py-4">Name</th>
               <th className="w-1/5 px-6 py-4">Team</th>
               <th className="w-1/5 px-6 py-4">Position</th>
+              <th className="w-1/12 px-6 py-4">Age</th>
               <th className="w-1/12 px-6 py-4">Number</th>
               <th className="w-1/12 px-6 py-4 text-right">Action</th>
             </tr>
@@ -158,10 +159,13 @@ const PlayerTable = () => {
                   {p.fullName}
                 </td>
                 <td className="px-6 py-5 text-sm text-gray-600">
-                  {teamNameById.get(p.teamId) ?? "-"}
+                  {p.teamId ? teamNameById.get(p.teamId) : "-"}
                 </td>
                 <td className="px-6 py-5 text-sm text-gray-600">
                   {p.position}
+                </td>
+                <td className="px-6 py-5 text-sm text-gray-600">
+                  {p.age ?? "-"}
                 </td>
                 <td className="px-6 py-5 text-sm text-gray-600">{p.number}</td>
 

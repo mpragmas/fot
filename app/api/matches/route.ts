@@ -11,8 +11,14 @@ export async function GET(req: NextRequest) {
     const queryOptions = buildQueryOptions(searchParams, {
       allowedFilters: [
         { name: "fixtureId", type: "number" },
+        { name: "id", type: "number" },
         { name: "reporterId", type: "number" },
         { name: "status", type: "string" },
+        {
+          name: "teamName",
+          type: "search",
+          fields: ["fixture.homeTeam.name", "fixture.awayTeam.name"],
+        },
       ],
     });
 

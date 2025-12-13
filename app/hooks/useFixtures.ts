@@ -5,7 +5,7 @@ import { useToast } from "@/app/components/ToastProvider";
 
 export type FixtureStatus = "UPCOMING" | "LIVE" | "COMPLETED";
 
-type ApiFixture = {
+export type ApiFixture = {
   id: number;
   season: {
     id: number;

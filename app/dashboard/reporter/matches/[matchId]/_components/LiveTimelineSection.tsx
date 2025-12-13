@@ -3,73 +3,22 @@ import { FiEdit2 } from "react-icons/fi";
 import { MdDeleteOutline, MdSportsSoccer } from "react-icons/md";
 import MatchTotalStats from "./MatchTotalStats";
 
-// --- Types ---
-type MatchStatType =
+// --- Shared recorded event types (used by RecordEvents + Timeline) ---
+export type RecordedEventType =
   | "GOAL"
-  | "ASSIST"
   | "YELLOW_CARD"
   | "RED_CARD"
   | "SUBSTITUTION";
-type MatchTeam = "HOME" | "AWAY";
 
-interface MatchStat {
+export type RecordedEventTeam = "HOME" | "AWAY";
+
+export interface RecordedEvent {
   id: number;
-  playerId: number;
-  matchId: number;
-  type: MatchStatType;
+  type: RecordedEventType;
   minute: number;
-  team: MatchTeam;
-  player: { id: number; name: string };
+  team: RecordedEventTeam;
+  playerName: string;
 }
-
-// Sample Data
-const dummyMatchStats: MatchStat[] = [
-  {
-    id: 1,
-    matchId: 20220528,
-    playerId: 20,
-    type: "GOAL",
-    minute: 59,
-    team: "AWAY",
-    player: { id: 20, name: "Vincius Junior" },
-  },
-  {
-    id: 2,
-    matchId: 20220528,
-    playerId: 15,
-    type: "ASSIST",
-    minute: 59,
-    team: "AWAY",
-    player: { id: 15, name: "Federico Valverde" },
-  },
-  {
-    id: 3,
-    matchId: 20220528,
-    playerId: 3,
-    type: "YELLOW_CARD",
-    minute: 62,
-    team: "HOME",
-    player: { id: 3, name: "Fabinho" },
-  },
-  {
-    id: 4,
-    matchId: 20220528,
-    playerId: 4,
-    type: "RED_CARD",
-    minute: 75,
-    team: "HOME",
-    player: { id: 4, name: "Virgil van Dijk" },
-  },
-  {
-    id: 5,
-    matchId: 20220528,
-    playerId: 9,
-    type: "SUBSTITUTION",
-    minute: 80,
-    team: "HOME",
-    player: { id: 9, name: "Roberto Firmino" },
-  },
-];
 
 // --- Timeline Item Component ---
 type TimelineSide = "left" | "right";
@@ -179,34 +128,46 @@ const TimelineItem: React.FC<TimelineItemProps> = ({
   );
 };
 
-// --- Format Match Stat ---
-const toTimelineProps = (stat: MatchStat): TimelineItemProps => ({
-  side: stat.team === "HOME" ? "right" : "left",
+// --- Format Recorded Event into Timeline props ---
+const toTimelineProps = (
+  event: RecordedEvent,
+  homeTeamName: string,
+  awayTeamName: string,
+): TimelineItemProps => ({
+  side: event.team === "HOME" ? "right" : "left",
   type:
-    stat.type === "GOAL" || stat.type === "ASSIST"
+    event.type === "GOAL"
       ? "goal"
-      : stat.type === "YELLOW_CARD"
+      : event.type === "YELLOW_CARD"
         ? "yellowCard"
-        : stat.type === "RED_CARD"
+        : event.type === "RED_CARD"
           ? "redCard"
           : "substitution",
   title:
-    stat.type === "GOAL"
-      ? `Goal by ${stat.player.name}`
-      : stat.type === "ASSIST"
-        ? `Assist by ${stat.player.name}`
-        : stat.type === "YELLOW_CARD"
-          ? `Yellow card for ${stat.player.name}`
-          : stat.type === "RED_CARD"
-            ? `Red card for ${stat.player.name}`
-            : `Substitution: ${stat.player.name}`,
-  subtitle: `${stat.minute}' ${
-    stat.team === "HOME" ? "Liverpool" : "Real Madrid"
+    event.type === "GOAL"
+      ? `Goal by ${event.playerName}`
+      : event.type === "YELLOW_CARD"
+        ? `Yellow card for ${event.playerName}`
+        : event.type === "RED_CARD"
+          ? `Red card for ${event.playerName}`
+          : `Substitution: ${event.playerName}`,
+  subtitle: `${event.minute}' ${
+    event.team === "HOME" ? homeTeamName : awayTeamName
   }`,
 });
 
+interface LiveTimelineSectionProps {
+  events: RecordedEvent[];
+  homeTeamName: string;
+  awayTeamName: string;
+}
+
 // --- Main Component ---
-export default function LiveTimelineSection() {
+export default function LiveTimelineSection({
+  events,
+  homeTeamName,
+  awayTeamName,
+}: LiveTimelineSectionProps) {
   return (
     <div className="mt-6 flex flex-col gap-6 lg:flex-row lg:items-start">
       {/* TIMELINE */}
@@ -217,25 +178,11 @@ export default function LiveTimelineSection() {
           {/* Vertical center line */}
           <div className="bg-gray-2 absolute inset-y-0 left-1/2 w-px -translate-x-1/2" />
 
-          {dummyMatchStats.map((s) => (
-            <TimelineItem key={s.id} {...toTimelineProps(s)} />
-          ))}
-
-          {/* HT divider: mask the vertical line and split the horizontal line into two segments with a gap */}
-          <div className="relative z-10 bg-white py-4">
-            {/* White mask over the vertical line in this band */}
-            <div className="pointer-events-none absolute top-0 bottom-0 left-1/2 w-6 -translate-x-1/2 bg-white" />
-
-            {/* Two separate horizontal segments with a visible gap in the middle */}
-            <div className="relative flex items-center justify-between gap-4">
-              <div className="bg-gray-2 h-px flex-1" />
-              <div className="w-8" />
-              <div className="bg-gray-2 h-px flex-1" />
-            </div>
-          </div>
-
-          {dummyMatchStats.map((s) => (
-            <TimelineItem key={`${s.id}-dup`} {...toTimelineProps(s)} />
+          {events.map((event) => (
+            <TimelineItem
+              key={event.id}
+              {...toTimelineProps(event, homeTeamName, awayTeamName)}
+            />
           ))}
         </div>
       </div>

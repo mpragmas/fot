@@ -27,13 +27,19 @@ io.on("connection", (socket) => {
 });
 
 app.post("/match-updated", (req, res) => {
-  const { id, status } = req.body || {};
+  const { id, status, phase, elapsedSeconds, clockStartedAt } = req.body || {};
 
-  if (!id || !status) {
-    return res.status(400).json({ error: "id and status are required" });
+  if (!id) {
+    return res.status(400).json({ error: "id is required" });
   }
 
-  io.emit("matchUpdated", { id, status });
+  io.emit("matchUpdated", {
+    id,
+    status,
+    phase,
+    elapsedSeconds,
+    clockStartedAt,
+  });
 
   return res.json({ ok: true });
 });

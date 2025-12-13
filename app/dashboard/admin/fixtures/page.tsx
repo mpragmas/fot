@@ -3,6 +3,7 @@
 import React, { useMemo, useState } from "react";
 import { useLeagues } from "@/app/hooks/useLeagues";
 import { useTeams } from "@/app/hooks/useTeams";
+import { useMatchStatusSocket } from "@/app/hooks/useMatchStatusSocket";
 import {
   useFixtures,
   useDeleteFixture,
@@ -35,6 +36,9 @@ export default function FixturesPage() {
   );
   const { fixtures, isLoading, isError } = useFixtures();
   const deleteFixture = useDeleteFixture();
+
+  // Subscribe to live match status updates so fixture statuses update in real time
+  useMatchStatusSocket();
 
   const filteredFixtures = useMemo(
     () =>

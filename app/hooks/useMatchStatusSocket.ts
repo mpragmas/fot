@@ -3,37 +3,109 @@
 import { useEffect } from "react";
 import { io, Socket } from "socket.io-client";
 import { useQueryClient } from "@tanstack/react-query";
+import { ReporterMatchStatus } from "./userReporterMatchs";
+import type { ApiFixture, FixtureStatus } from "./useFixtures";
 
 let socket: Socket | null = null;
+
+// Optimize: Singleton connection to avoid multiple handshakes
+function getSocket() {
+  if (!socket) {
+    socket = io("http://localhost:4000", {
+      transports: ["websocket"],
+      reconnection: true,
+      reconnectionAttempts: 10,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+    });
+  }
+  return socket;
+}
 
 export function useMatchStatusSocket(reporterId?: number | null) {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    if (!reporterId) return;
+    const socketInstance = getSocket();
 
-    if (!socket) {
-      socket = io("http://localhost:4000", {
-        transports: ["websocket"],
-      });
+    if (!socketInstance.connected) {
+      socketInstance.connect();
     }
 
-    const handler = (payload: { id: number; status: string }) => {
-      queryClient.setQueryData(["matches", reporterId], (old: unknown) => {
-        if (!Array.isArray(old)) return old;
+    const handler = (payload: {
+      id: number;
+      status?: ReporterMatchStatus;
+      phase?: string | null;
+      elapsedSeconds?: number;
+      clockStartedAt?: string | null;
+      clockPausedAt?: string | null;
+      clockStoppedAt?: string | null;
+    }) => {
+      if (!payload.id) return;
 
-        return old.map((m) =>
-          m && typeof m === "object" && (m as any).id === payload.id
-            ? { ...(m as any), status: payload.status }
-            : m,
+      // Beast Mode: Surgical update of the cache.
+      // 1) Reporter matches lists for this reporter
+      if (payload.status) {
+        queryClient.setQueriesData<{ data: any[]; total: number }>(
+          { queryKey: ["matches", reporterId] },
+          (old) => {
+            if (!old || !old.data || !Array.isArray(old.data)) return old;
+
+            const matchExists = old.data.some((m) => m.id === payload.id);
+            if (!matchExists) return old;
+
+            return {
+              ...old,
+              data: old.data.map((m) =>
+                m.id === payload.id ? { ...m, status: payload.status } : m,
+              ),
+            };
+          },
         );
+      }
+
+      // 2) Single match detail page: ["match", matchId]
+      queryClient.setQueryData(["match", payload.id], (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          ...(payload.status ? { status: payload.status } : {}),
+          ...(payload.phase ? { phase: payload.phase } : {}),
+          ...(typeof payload.elapsedSeconds === "number"
+            ? { elapsedSeconds: payload.elapsedSeconds }
+            : {}),
+          ...(payload.clockStartedAt !== undefined
+            ? { clockStartedAt: payload.clockStartedAt }
+            : {}),
+        };
+      });
+
+      // 3) Admin fixtures list: ["fixtures"]
+      queryClient.setQueryData<ApiFixture[]>(["fixtures"], (old) => {
+        if (!old || !Array.isArray(old)) return old;
+
+        let changed = false;
+        const next = old.map((fixture) => {
+          if (!fixture.match || fixture.match.id !== payload.id) return fixture;
+          if (!payload.status) return fixture;
+          changed = true;
+          return {
+            ...fixture,
+            match: {
+              ...fixture.match,
+              status: payload.status as FixtureStatus,
+            },
+          };
+        });
+
+        return changed ? next : old;
       });
     };
 
-    socket.on("matchUpdated", handler);
+    socketInstance.on("matchUpdated", handler);
 
     return () => {
-      socket?.off("matchUpdated", handler);
+      socketInstance.off("matchUpdated", handler);
     };
   }, [reporterId, queryClient]);
 }

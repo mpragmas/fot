@@ -33,29 +33,54 @@ export type ReporterMatchItem = {
   status: ReporterMatchStatus;
 };
 
-async function fetchReporterMatches(reporterId: number): Promise<ApiMatch[]> {
-  const res = await fetch(`/api/matches?reporterId=${reporterId}`);
-  if (!res.ok) throw new Error("Failed to fetch reporter matches");
-  const data = await res.json();
-  return data.data;
+interface ReporterMatchesOptions {
+  search?: string;
+  status?: ReporterMatchStatus | "";
+  orderBy?: string;
+  order?: "asc" | "desc";
+  page?: number;
+  pageSize?: number;
 }
 
-export function useReporterMatches() {
+interface MatchesResponse {
+  total: number;
+  data: ApiMatch[];
+}
+
+async function fetchReporterMatches(
+  reporterId: number,
+  options: ReporterMatchesOptions,
+): Promise<MatchesResponse> {
+  const params = new URLSearchParams();
+  params.set("reporterId", String(reporterId));
+  if (options.search) params.set("teamName", options.search);
+  if (options.status) params.set("status", options.status);
+  if (options.orderBy) params.set("orderBy", options.orderBy);
+  if (options.order) params.set("order", options.order);
+  params.set("page", String(options.page || 1));
+  params.set("pageSize", String(options.pageSize || 10));
+
+  const res = await fetch(`/api/matches?${params.toString()}`);
+  if (!res.ok) throw new Error("Failed to fetch reporter matches");
+  return res.json();
+}
+
+export function useReporterMatches(options: ReporterMatchesOptions = {}) {
   const { data: session } = useSession();
   const reporterId = (session?.user as any)?.id;
 
-  const query = useQuery<ApiMatch[]>({
-    queryKey: ["matches", reporterId],
-    queryFn: () => fetchReporterMatches(reporterId),
+  const query = useQuery<MatchesResponse>({
+    queryKey: ["matches", reporterId, options],
+    queryFn: () => fetchReporterMatches(reporterId, options),
     enabled: !!reporterId,
-    staleTime: 1000 * 60 * 2, // 2 mins, prevents excessive re-fetching
+    staleTime: 1000 * 60 * 2, // 2 mins
   });
 
   useMatchStatusSocket(reporterId);
 
   const matches = useMemo<ReporterMatchItem[]>(() => {
     return (
-      query.data?.map((m) => ({
+      query.data?.data.map((m) => ({
         id: m.id,
         fixtureId: m.fixture.id,
         leagueId: m.fixture.season.leagueId,
@@ -71,6 +96,7 @@ export function useReporterMatches() {
 
   return {
     matches,
+    total: query.data?.total || 0,
     isLoading: query.isLoading,
     isError: query.isError,
     error: query.error,
