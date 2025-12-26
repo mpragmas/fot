@@ -11,6 +11,14 @@ const LeagueNav = ({
 }) => {
   const pathname = usePathname();
 
+  const activeHref = React.useMemo(() => {
+    const matches = status.filter(
+      (s) => pathname === s.href || pathname.startsWith(`${s.href}/`),
+    );
+    matches.sort((a, b) => b.href.length - a.href.length);
+    return matches[0]?.href;
+  }, [pathname, status]);
+
   return (
     <div className="dark:text-dark-3 mt-10 flex items-center gap-10 text-sm font-bold">
       {status.map((item, i) => (
@@ -18,7 +26,7 @@ const LeagueNav = ({
           key={i}
           href={item.href}
           className={`dark:hover:text-dark-4 pb-2 ${
-            pathname === item.href ? "border-green border-b-3" : ""
+            activeHref === item.href ? "border-green border-b-3" : ""
           }`}
         >
           {item.name}

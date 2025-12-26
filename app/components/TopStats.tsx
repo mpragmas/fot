@@ -1,79 +1,96 @@
 import React from "react";
 import PlayerStatCard from "../ui/PlayerStatsCard";
 
-const TopStats: React.FC = () => {
-  const topRated = [
-    {
-      name: "Erling Haaland",
-      team: "Manchester City",
-      teamLogo:
-        "https://upload.wikimedia.org/wikipedia/en/e/eb/Manchester_City_FC_badge.svg",
-      value: "8.11",
-    },
-    {
-      name: "Bruno Fernandes",
-      team: "Manchester United",
-      teamLogo:
-        "https://upload.wikimedia.org/wikipedia/en/7/7a/Manchester_United_FC_crest.svg",
-      value: "7.74",
-    },
-    {
-      name: "Nordi Mukiele",
-      team: "Sunderland",
-      teamLogo:
-        "https://upload.wikimedia.org/wikipedia/en/8/82/Sunderland_AFC_logo.svg",
-      value: "7.68",
-    },
-  ];
+type StatCardItem = {
+  name: string;
+  team: string;
+  teamLogo: string;
+  value: string | number;
+};
 
-  const topScorers = [
-    {
-      name: "Erling Haaland",
-      team: "Manchester City",
-      teamLogo:
-        "https://upload.wikimedia.org/wikipedia/en/e/eb/Manchester_City_FC_badge.svg",
-      value: "13",
-    },
-    {
-      name: "Danny Welbeck",
-      team: "Brighton and Hove Albion",
-      teamLogo:
-        "https://upload.wikimedia.org/wikipedia/en/f/fd/Brighton_%26_Hove_Albion_logo.svg",
-      value: "6",
-    },
-    {
-      name: "Antoine Semenyo",
-      team: "Bournemouth",
-      teamLogo:
-        "https://upload.wikimedia.org/wikipedia/en/e/e5/AFC_Bournemouth_(2013).svg",
-      value: "6",
-    },
-  ];
+type TopStatsProps = {
+  topRated?: StatCardItem[];
+  topScorers?: StatCardItem[];
+  topAssists?: StatCardItem[];
+};
 
-  const topAssists = [
-    {
-      name: "Jack Grealish",
-      team: "Everton",
-      teamLogo:
-        "https://upload.wikimedia.org/wikipedia/en/7/7c/Everton_FC_logo.svg",
-      value: "4",
-    },
-    {
-      name: "Mohammed Kudus",
-      team: "Tottenham Hotspur",
-      teamLogo:
-        "https://upload.wikimedia.org/wikipedia/en/b/b4/Tottenham_Hotspur.svg",
-      value: "4",
-    },
-    {
-      name: "Quilindschy Hartman",
-      team: "Burnley",
-      teamLogo:
-        "https://upload.wikimedia.org/wikipedia/en/0/02/Burnley_FC_badge.png",
-      value: "4",
-    },
-  ];
+const fallbackTopRated: StatCardItem[] = [
+  {
+    name: "Erling Haaland",
+    team: "Manchester City",
+    teamLogo:
+      "https://upload.wikimedia.org/wikipedia/en/e/eb/Manchester_City_FC_badge.svg",
+    value: "8.11",
+  },
+  {
+    name: "Bruno Fernandes",
+    team: "Manchester United",
+    teamLogo:
+      "https://upload.wikimedia.org/wikipedia/en/7/7a/Manchester_United_FC_crest.svg",
+    value: "7.74",
+  },
+  {
+    name: "Nordi Mukiele",
+    team: "Sunderland",
+    teamLogo:
+      "https://upload.wikimedia.org/wikipedia/en/8/82/Sunderland_AFC_logo.svg",
+    value: "7.68",
+  },
+];
 
+const fallbackTopScorers: StatCardItem[] = [
+  {
+    name: "Erling Haaland",
+    team: "Manchester City",
+    teamLogo:
+      "https://upload.wikimedia.org/wikipedia/en/e/eb/Manchester_City_FC_badge.svg",
+    value: "13",
+  },
+  {
+    name: "Danny Welbeck",
+    team: "Brighton and Hove Albion",
+    teamLogo:
+      "https://upload.wikimedia.org/wikipedia/en/f/fd/Brighton_%26_Hove_Albion_logo.svg",
+    value: "6",
+  },
+  {
+    name: "Antoine Semenyo",
+    team: "Bournemouth",
+    teamLogo:
+      "https://upload.wikimedia.org/wikipedia/en/e/e5/AFC_Bournemouth_(2013).svg",
+    value: "6",
+  },
+];
+
+const fallbackTopAssists: StatCardItem[] = [
+  {
+    name: "Jack Grealish",
+    team: "Everton",
+    teamLogo:
+      "https://upload.wikimedia.org/wikipedia/en/7/7c/Everton_FC_logo.svg",
+    value: "4",
+  },
+  {
+    name: "Mohammed Kudus",
+    team: "Tottenham Hotspur",
+    teamLogo:
+      "https://upload.wikimedia.org/wikipedia/en/b/b4/Tottenham_Hotspur.svg",
+    value: "4",
+  },
+  {
+    name: "Quilindschy Hartman",
+    team: "Burnley",
+    teamLogo:
+      "https://upload.wikimedia.org/wikipedia/en/0/02/Burnley_FC_badge.png",
+    value: "4",
+  },
+];
+
+const TopStats: React.FC<TopStatsProps> = ({
+  topRated = fallbackTopRated,
+  topScorers = fallbackTopScorers,
+  topAssists = fallbackTopAssists,
+}) => {
   return (
     <div className="dark:text-whitish bg-whitish dark:bg-dark-1 mx-auto mt-5 grid w-full grid-cols-1 gap-6 rounded-2xl p-6 sm:grid-cols-3">
       {/* Top Rated */}

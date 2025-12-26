@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import { useTopLeagues } from "../hooks/useTopLeagues";
 import TopLeagueSkeleton from "./TopLeagueSkeleton";
 
@@ -27,10 +28,14 @@ const TopLeague = () => {
       <h1 className="p-5">Top League</h1>
       <div className="space-y-2 px-7 py-4">
         {leagues.map((league) => (
-          <div className="flex items-center gap-1" key={league.id}>
+          <Link
+            key={league.id}
+            href={`/fan/league/${league.id}`}
+            className="flex items-center gap-1"
+          >
             <p className="bg-dark-4 inline rounded-full px-4 py-4" />
             <p>{league.name}</p>
-          </div>
+          </Link>
         ))}
       </div>
     </div>

@@ -1,32 +1,35 @@
 import PlayerStatCard from "@/app/ui/PlayerStatsCard";
 import React from "react";
 import { FaAngleRight } from "react-icons/fa";
+import {
+  getSeasonTopStats,
+  resolveSeasonForLeague,
+} from "../../_lib/leagueData";
+import { notFound } from "next/navigation";
 
-const topRated = [
-  {
-    name: "Erling Haaland",
-    team: "Manchester City",
-    teamLogo:
-      "https://upload.wikimedia.org/wikipedia/en/e/eb/Manchester_City_FC_badge.svg",
-    value: "8.11",
-  },
-  {
-    name: "Bruno Fernandes",
-    team: "Manchester United",
-    teamLogo:
-      "https://upload.wikimedia.org/wikipedia/en/7/7a/Manchester_United_FC_crest.svg",
-    value: "7.74",
-  },
-  {
-    name: "Nordi Mukiele",
-    team: "Sunderland",
-    teamLogo:
-      "https://upload.wikimedia.org/wikipedia/en/8/82/Sunderland_AFC_logo.svg",
-    value: "7.68",
-  },
-];
+type LeagueStatsProps = {
+  params: Promise<{ id: string }>;
+  searchParams?: Promise<{ seasonId?: string }>;
+};
 
-const LeagueStats = () => {
+const LeagueStats = async ({ params, searchParams }: LeagueStatsProps) => {
+  const { id } = await params;
+  const leagueId = Number(id);
+  if (!Number.isFinite(leagueId)) {
+    notFound();
+  }
+
+  const sp = (await searchParams) ?? {};
+  const seasonIdParam = sp.seasonId ? Number(sp.seasonId) : undefined;
+  const season = await resolveSeasonForLeague(leagueId, seasonIdParam);
+  if (!season) {
+    notFound();
+  }
+
+  const { topScorers, topAssists, topRated } = await getSeasonTopStats(
+    season.id,
+  );
+
   return (
     <>
       <div className="dark:bg-dark-1 dark:text-whitish mt-5 space-x-3 rounded-2xl p-5">
@@ -44,11 +47,11 @@ const LeagueStats = () => {
             <h3 className="mb-4 text-sm font-semibold">Top Score</h3>
             <FaAngleRight className="mr-4" />
           </div>
-          {topRated.map((player, index) => (
+          {topScorers.map((player, index) => (
             <PlayerStatCard
               key={index}
               {...player}
-              lastBorder={index !== topRated.length - 1} // only non-last ones get border
+              lastBorder={index !== topScorers.length - 1} // only non-last ones get border
             />
           ))}
         </div>
@@ -57,11 +60,11 @@ const LeagueStats = () => {
             <h3 className="mb-4 text-sm font-semibold">Assists</h3>
             <FaAngleRight className="mr-4" />
           </div>
-          {topRated.map((player, index) => (
+          {topAssists.map((player, index) => (
             <PlayerStatCard
               key={index}
               {...player}
-              lastBorder={index !== topRated.length - 1} // only non-last ones get border
+              lastBorder={index !== topAssists.length - 1} // only non-last ones get border
             />
           ))}
         </div>
