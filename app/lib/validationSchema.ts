@@ -133,6 +133,13 @@ export const patchLineupItemSchema = z.object({
   isStarting: z.boolean().optional(),
 });
 
+export const patchMatchCountersSchema = z.object({
+  homeShotsOnTargetDelta: z.number().int().optional(),
+  awayShotsOnTargetDelta: z.number().int().optional(),
+  homeCornersDelta: z.number().int().optional(),
+  awayCornersDelta: z.number().int().optional(),
+});
+
 export const newsSchema = z.object({
   title: z.string().min(1, "Title is required"),
   content: z.string().min(1, "Content is required"),

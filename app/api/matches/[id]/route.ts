@@ -2,12 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/app/lib/prisma";
 import { handleError } from "@/app/lib/routeError";
 import { patchMatchSchema } from "@/app/lib/validationSchema";
+import { ensureSocketStarted } from "@/app/lib/socket";
 
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    ensureSocketStarted();
+
     const { id: idParam } = await params;
     const id = Number(idParam);
     if (Number.isNaN(id)) {
@@ -17,7 +20,49 @@ export async function GET(
     const match = await prisma.match.findUnique({
       where: { id },
       include: {
-        fixture: { include: { season: true, homeTeam: true, awayTeam: true } },
+        fixture: {
+          include: {
+            season: true,
+            homeTeam: {
+              include: {
+                players: {
+                  select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                    number: true,
+                    teamId: true,
+                  },
+                },
+              },
+            },
+            awayTeam: {
+              include: {
+                players: {
+                  select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                    number: true,
+                    teamId: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        counters: true,
+        stats: {
+          orderBy: [{ minute: "asc" }, { id: "asc" }],
+          select: {
+            id: true,
+            matchId: true,
+            playerId: true,
+            type: true,
+            minute: true,
+            createdAt: true,
+          },
+        },
         reporter: {
           select: {
             id: true,
@@ -27,7 +72,7 @@ export async function GET(
             Image: true,
           },
         },
-      },
+      } as any,
     });
     if (!match) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });

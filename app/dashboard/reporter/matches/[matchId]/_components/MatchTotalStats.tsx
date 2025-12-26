@@ -15,18 +15,43 @@ const StatCard: React.FC<StatCardProps> = ({ label, value }) => (
   </div>
 );
 
-const MatchTotalStats = () => {
+interface MatchTotalStatsProps {
+  counters: {
+    homeShotsOnTarget: number;
+    awayShotsOnTarget: number;
+    homeCorners: number;
+    awayCorners: number;
+  };
+  homeTeamName: string;
+  awayTeamName: string;
+}
+
+const MatchTotalStats: React.FC<MatchTotalStatsProps> = ({
+  counters,
+  homeTeamName,
+  awayTeamName,
+}) => {
   return (
     <div className="w-full rounded-2xl p-6 shadow md:p-8 lg:w-1/3">
       <h2 className="mb-6 text-xl font-bold">Stats</h2>
 
       <div className="grid grid-cols-2 gap-4">
-        <StatCard label="Shots APR" value="0" />
-        <StatCard label="Shots RAY" value="0" />
-        <StatCard label="Corner APR" value="0" />
-        <StatCard label="Corner RAY" value="0" />
-        <StatCard label="" value="0" />
-        <StatCard label="Shots" value="0" />
+        <StatCard
+          label={`SOT ${homeTeamName}`}
+          value={counters.homeShotsOnTarget}
+        />
+        <StatCard
+          label={`SOT ${awayTeamName}`}
+          value={counters.awayShotsOnTarget}
+        />
+        <StatCard
+          label={`Corners ${homeTeamName}`}
+          value={counters.homeCorners}
+        />
+        <StatCard
+          label={`Corners ${awayTeamName}`}
+          value={counters.awayCorners}
+        />
       </div>
     </div>
   );

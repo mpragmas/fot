@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/app/lib/prisma";
 import { handleError } from "@/app/lib/routeError";
+import { ensureSocketStarted, emitClockUpdated } from "@/app/lib/socket";
 
 // Actions that control the authoritative match clock & phase
 const VALID_ACTIONS = new Set([
@@ -23,6 +24,8 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    ensureSocketStarted();
+
     const { id: idParam } = await params;
     const id = Number(idParam);
     if (Number.isNaN(id)) {
@@ -111,22 +114,12 @@ export async function PATCH(
       } as any,
     });
 
-    // Notify Socket Server with full clock state
-    try {
-      await fetch("http://localhost:4000/match-updated", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: updated.id,
-          status: (updated as any).status,
-          phase: (updated as any).phase,
-          elapsedSeconds: (updated as any).elapsedSeconds,
-          clockStartedAt: (updated as any).clockStartedAt,
-        }),
-      });
-    } catch (notifyError) {
-      console.error("Failed to notify socket server", notifyError);
-    }
+    emitClockUpdated({
+      id: updated.id,
+      phase: (updated as any).phase,
+      elapsedSeconds: (updated as any).elapsedSeconds,
+      clockStartedAt: (updated as any).clockStartedAt,
+    });
 
     return NextResponse.json(updated);
   } catch (e: any) {

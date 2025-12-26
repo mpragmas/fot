@@ -52,15 +52,48 @@ export async function POST(
 
     const { playerId, type, minute } = parsed.data;
 
-    const stat = await prisma.matchStat.create({
-      data: { matchId, playerId, type, minute },
+    if (type !== "YELLOW_CARD") {
+      const stat = await prisma.matchStat.create({
+        data: { matchId, playerId, type, minute },
+      });
+
+      emitStat(matchId, stat);
+
+      await recomputePlayerStatsForMatch(matchId);
+
+      return NextResponse.json(stat, { status: 201 });
+    }
+
+    const previousYellows = await prisma.matchStat.count({
+      where: { matchId, playerId, type: "YELLOW_CARD" },
     });
 
-    emitStat(matchId, stat);
+    const created = await prisma.$transaction(async (tx) => {
+      const yellow = await tx.matchStat.create({
+        data: { matchId, playerId, type: "YELLOW_CARD", minute },
+      });
+
+      if (previousYellows >= 1) {
+        const red = await tx.matchStat.create({
+          data: { matchId, playerId, type: "RED_CARD", minute },
+        });
+        return { yellow, red };
+      }
+
+      return { yellow };
+    });
+
+    emitStat(matchId, created.yellow);
+    if (created.red) emitStat(matchId, created.red);
 
     await recomputePlayerStatsForMatch(matchId);
 
-    return NextResponse.json(stat, { status: 201 });
+    return NextResponse.json(
+      created.red ? [created.yellow, created.red] : created.yellow,
+      {
+        status: 201,
+      },
+    );
   } catch (e: unknown) {
     return handleError(e, "Failed to create match stat", {
       notFoundCodes: ["P2025"],

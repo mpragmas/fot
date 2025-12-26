@@ -1,5 +1,10 @@
 import { Server, type Socket } from "socket.io";
-import type { Lineup, MatchStat } from "../generated/prisma/client";
+import type {
+  Lineup,
+  MatchCounters,
+  MatchStat,
+  Match,
+} from "../generated/prisma/client";
 
 export type ClientToServerEvents = {
   join: (payload: { matchId: number }) => void;
@@ -9,6 +14,20 @@ export type ServerToClientEvents = {
   "stats:new": (payload: { matchId: number; stat: MatchStat }) => void;
   "stats:update": (payload: { matchId: number; stat: MatchStat }) => void;
   "stats:delete": (payload: { matchId: number; statId: number }) => void;
+  "clock:update": (payload: {
+    matchId: number;
+    phase: Match["phase"];
+    elapsedSeconds: number;
+    clockStartedAt: Date | null;
+  }) => void;
+  "counters:update": (payload: {
+    matchId: number;
+    counters: MatchCounters;
+  }) => void;
+  "match:update": (payload: {
+    matchId: number;
+    status: Match["status"];
+  }) => void;
   "lineup:update": (payload: { matchId: number; lineups: Lineup[] }) => void;
 };
 
@@ -31,9 +50,7 @@ export function getIO(): Server<ClientToServerEvents, ServerToClientEvents> {
 
     io.on(
       "connection",
-      (
-        socket: Socket<ClientToServerEvents, ServerToClientEvents>,
-      ): void => {
+      (socket: Socket<ClientToServerEvents, ServerToClientEvents>): void => {
         socket.on("join", ({ matchId }: { matchId: number }) => {
           if (Number.isFinite(matchId)) {
             socket.join(roomName(matchId));
@@ -71,4 +88,35 @@ export function emitStatDeleted(matchId: number, statId: number): void {
 export function emitLineup(matchId: number, lineups: Lineup[]): void {
   const io = getIO();
   io.to(roomName(matchId)).emit("lineup:update", { matchId, lineups });
+}
+
+export function emitClockUpdated(match: {
+  id: number;
+  phase: Match["phase"];
+  elapsedSeconds: number;
+  clockStartedAt: Date | null;
+}): void {
+  const io = getIO();
+  io.to(roomName(match.id)).emit("clock:update", {
+    matchId: match.id,
+    phase: match.phase,
+    elapsedSeconds: match.elapsedSeconds,
+    clockStartedAt: match.clockStartedAt,
+  });
+}
+
+export function emitCountersUpdated(
+  matchId: number,
+  counters: MatchCounters,
+): void {
+  const io = getIO();
+  io.to(roomName(matchId)).emit("counters:update", { matchId, counters });
+}
+
+export function emitMatchUpdated(
+  matchId: number,
+  status: Match["status"],
+): void {
+  const io = getIO();
+  io.to(roomName(matchId)).emit("match:update", { matchId, status });
 }

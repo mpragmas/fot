@@ -6,6 +6,8 @@ import MatchTotalStats from "./MatchTotalStats";
 // --- Shared recorded event types (used by RecordEvents + Timeline) ---
 export type RecordedEventType =
   | "GOAL"
+  | "OWN_GOAL"
+  | "ASSIST"
   | "YELLOW_CARD"
   | "RED_CARD"
   | "SUBSTITUTION";
@@ -17,7 +19,8 @@ export interface RecordedEvent {
   type: RecordedEventType;
   minute: number;
   team: RecordedEventTeam;
-  playerName: string;
+  playerId: number;
+  playerName?: string;
 }
 
 // --- Timeline Item Component ---
@@ -56,7 +59,6 @@ const TimelineItem: React.FC<TimelineItemProps> = ({
     );
     iconBg = "bg-red-100";
   } else {
-    // substitution
     Icon = ({ className }) => (
       <div
         className={`flex h-4 w-4 items-center justify-center rounded-full bg-blue-500 text-[10px] text-white ${className ?? ""}`}
@@ -80,16 +82,6 @@ const TimelineItem: React.FC<TimelineItemProps> = ({
                 <h4 className="font-bold text-gray-800">{title}</h4>
                 <p className="text-gray-1 text-sm">{subtitle}</p>
               </div>
-
-              {/* ACTIONS beside the player */}
-              <div className="space-x-1">
-                <button className="text-blue-400 hover:text-blue-600">
-                  <FiEdit2 className="h-4 w-4" />
-                </button>
-                <button className="text-red-400 hover:text-red-600">
-                  <MdDeleteOutline className="h-5 w-5" />
-                </button>
-              </div>
             </div>
           </div>
         )}
@@ -107,15 +99,6 @@ const TimelineItem: React.FC<TimelineItemProps> = ({
         {side === "right" && (
           <div className="flex w-full flex-col items-start">
             <div className="flex items-center gap-5">
-              {/* ACTIONS beside player */}
-              <div className="space-x-1">
-                <button className="text-red-400 hover:text-red-600">
-                  <MdDeleteOutline className="h-5 w-5" />
-                </button>
-                <button className="text-blue-400 hover:text-blue-600">
-                  <FiEdit2 className="h-4 w-4" />
-                </button>
-              </div>
               <div>
                 <h4 className="font-bold text-gray-800">{title}</h4>
                 <p className="text-sm text-gray-400">{subtitle}</p>
@@ -128,46 +111,141 @@ const TimelineItem: React.FC<TimelineItemProps> = ({
   );
 };
 
+function formatMinute(minute: number) {
+  if (!Number.isFinite(minute) || minute < 0) return "0'";
+  return `${minute}'`;
+}
+
+function sortKey(event: RecordedEvent) {
+  const base = Number.isFinite(event.minute) ? event.minute : 0;
+  return base * 100;
+}
+
 // --- Format Recorded Event into Timeline props ---
 const toTimelineProps = (
   event: RecordedEvent,
   homeTeamName: string,
   awayTeamName: string,
-): TimelineItemProps => ({
-  side: event.team === "HOME" ? "right" : "left",
-  type:
-    event.type === "GOAL"
+): TimelineItemProps => {
+  const teamName = event.team === "HOME" ? homeTeamName : awayTeamName;
+
+  const type: TimelineType =
+    event.type === "GOAL" ||
+    event.type === "OWN_GOAL" ||
+    event.type === "ASSIST"
       ? "goal"
       : event.type === "YELLOW_CARD"
         ? "yellowCard"
         : event.type === "RED_CARD"
           ? "redCard"
-          : "substitution",
-  title:
+          : "substitution";
+
+  const title =
     event.type === "GOAL"
-      ? `Goal by ${event.playerName}`
-      : event.type === "YELLOW_CARD"
-        ? `Yellow card for ${event.playerName}`
-        : event.type === "RED_CARD"
-          ? `Red card for ${event.playerName}`
-          : `Substitution: ${event.playerName}`,
-  subtitle: `${event.minute}' ${
-    event.team === "HOME" ? homeTeamName : awayTeamName
-  }`,
-});
+      ? `Goal by ${event.playerName ?? "Unknown"}`
+      : event.type === "OWN_GOAL"
+        ? `Own goal by ${event.playerName ?? "Unknown"}`
+        : event.type === "ASSIST"
+          ? `Assist by ${event.playerName ?? "Unknown"}`
+          : event.type === "YELLOW_CARD"
+            ? `Yellow card for ${event.playerName ?? "Unknown"}`
+            : event.type === "RED_CARD"
+              ? `Red card for ${event.playerName ?? "Unknown"}`
+              : `Substitution: ${event.playerName ?? "Unknown"}`;
+
+  const subtitleParts = [`${formatMinute(event.minute)} ${teamName}`].filter(
+    Boolean,
+  ) as string[];
+
+  return {
+    side: event.team === "HOME" ? "right" : "left",
+    type,
+    title,
+    subtitle: subtitleParts.join(" • "),
+  };
+};
 
 interface LiveTimelineSectionProps {
   events: RecordedEvent[];
+  counters: {
+    homeShotsOnTarget: number;
+    awayShotsOnTarget: number;
+    homeCorners: number;
+    awayCorners: number;
+  };
   homeTeamName: string;
   awayTeamName: string;
+  homePlayers: { id: number; name: string }[];
+  awayPlayers: { id: number; name: string }[];
+  onDeleteEvent: (statId: number) => void;
+  onEditEvent: (payload: {
+    statId: number;
+    playerId: number;
+    type: RecordedEventType;
+    minute: number;
+  }) => void;
 }
 
 // --- Main Component ---
 export default function LiveTimelineSection({
   events,
+  counters,
   homeTeamName,
   awayTeamName,
+  homePlayers,
+  awayPlayers,
+  onDeleteEvent,
+  onEditEvent,
 }: LiveTimelineSectionProps) {
+  const [editingId, setEditingId] = React.useState<number | null>(null);
+  const [editMinute, setEditMinute] = React.useState<string>("0");
+  const [editPlayerId, setEditPlayerId] = React.useState<string>("");
+  const [editType, setEditType] = React.useState<RecordedEventType>("GOAL");
+
+  const allPlayers = React.useMemo(
+    () => [...homePlayers, ...awayPlayers],
+    [homePlayers, awayPlayers],
+  );
+
+  const startEdit = React.useCallback(
+    (e: RecordedEvent) => {
+      setEditingId(e.id);
+      setEditMinute(String(e.minute));
+      setEditPlayerId(String(e.playerId));
+      setEditType(e.type);
+    },
+    [setEditingId],
+  );
+
+  const cancelEdit = React.useCallback(() => {
+    setEditingId(null);
+  }, []);
+
+  const saveEdit = React.useCallback(() => {
+    if (editingId == null) return;
+    const minute = Number(editMinute);
+    const playerId = Number(editPlayerId);
+    if (!Number.isFinite(minute) || minute < 0) return;
+    if (!Number.isFinite(playerId) || playerId < 1) return;
+    onEditEvent({
+      statId: editingId,
+      minute: Math.floor(minute),
+      playerId,
+      type: editType,
+    });
+    setEditingId(null);
+  }, [editingId, editMinute, editPlayerId, editType, onEditEvent]);
+
+  const sortedEvents = React.useMemo(() => {
+    if (!events || events.length === 0) return [];
+    const copy = [...events];
+    copy.sort((a, b) => {
+      const d = sortKey(a) - sortKey(b);
+      return d !== 0 ? d : a.id - b.id;
+    });
+    return copy;
+  }, [events]);
+
   return (
     <div className="mt-6 flex flex-col gap-6 lg:flex-row lg:items-start">
       {/* TIMELINE */}
@@ -178,17 +256,109 @@ export default function LiveTimelineSection({
           {/* Vertical center line */}
           <div className="bg-gray-2 absolute inset-y-0 left-1/2 w-px -translate-x-1/2" />
 
-          {events.map((event) => (
-            <TimelineItem
-              key={event.id}
-              {...toTimelineProps(event, homeTeamName, awayTeamName)}
-            />
+          {sortedEvents.map((event) => (
+            <div key={event.id}>
+              {editingId === event.id ? (
+                <div className="mb-8 rounded-lg border border-gray-200 p-4">
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+                    <div>
+                      <label className="mb-1 block text-sm text-gray-600">
+                        Type
+                      </label>
+                      <select
+                        className="border-gray-2 w-full rounded-md border p-2 outline-none focus:outline-none"
+                        value={editType}
+                        onChange={(ev) =>
+                          setEditType(ev.target.value as RecordedEventType)
+                        }
+                      >
+                        <option value="GOAL">Goal</option>
+                        <option value="OWN_GOAL">Own goal</option>
+                        <option value="ASSIST">Assist</option>
+                        <option value="YELLOW_CARD">Yellow card</option>
+                        <option value="RED_CARD">Red card</option>
+                        <option value="SUBSTITUTION">Substitution</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-sm text-gray-600">
+                        Player
+                      </label>
+                      <select
+                        className="border-gray-2 w-full rounded-md border p-2 outline-none focus:outline-none"
+                        value={editPlayerId}
+                        onChange={(ev) => setEditPlayerId(ev.target.value)}
+                      >
+                        {allPlayers.map((p) => (
+                          <option key={p.id} value={String(p.id)}>
+                            {p.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-sm text-gray-600">
+                        Minute
+                      </label>
+                      <input
+                        className="border-gray-2 w-full rounded-md border p-2 outline-none focus:outline-none"
+                        inputMode="numeric"
+                        value={editMinute}
+                        onChange={(ev) => setEditMinute(ev.target.value)}
+                      />
+                    </div>
+                    <div className="flex items-end gap-2">
+                      <button
+                        type="button"
+                        onClick={saveEdit}
+                        className="bg-blue-2 rounded-md px-4 py-2 text-white outline-none focus:outline-none"
+                      >
+                        Save
+                      </button>
+                      <button
+                        type="button"
+                        onClick={cancelEdit}
+                        className="rounded-md border border-gray-200 px-4 py-2 outline-none focus:outline-none"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="relative">
+                  <TimelineItem
+                    {...toTimelineProps(event, homeTeamName, awayTeamName)}
+                  />
+                  <div className="absolute top-2 right-2 flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => startEdit(event)}
+                      className="text-blue-400 hover:text-blue-600"
+                    >
+                      <FiEdit2 className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onDeleteEvent(event.id)}
+                      className="text-red-400 hover:text-red-600"
+                    >
+                      <MdDeleteOutline className="h-5 w-5" />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           ))}
         </div>
       </div>
 
       {/* STATS */}
-      <MatchTotalStats />
+      <MatchTotalStats
+        counters={counters}
+        homeTeamName={homeTeamName}
+        awayTeamName={awayTeamName}
+      />
     </div>
   );
 }

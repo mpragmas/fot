@@ -16,6 +16,7 @@ interface Match {
 
 interface MatchReportHeaderProps {
   match?: Match;
+  score: { home: number; away: number };
   controls: {
     startMatch: () => void;
     endFirstHalf: () => void;
@@ -26,15 +27,34 @@ interface MatchReportHeaderProps {
   };
 }
 
-type Phase =
-  | "PRE" // before kickoff
-  | "FIRST_HALF"
-  | "HT"
-  | "SECOND_HALF"
-  | "ET" // extra time
-  | "FT";
+type Phase = "PRE" | "FIRST_HALF" | "HT" | "SECOND_HALF" | "ET" | "FT";
 
-const MatchReportHeader = ({ match, controls }: MatchReportHeaderProps) => {
+function isRunningPhase(phase: Phase) {
+  return phase === "FIRST_HALF" || phase === "SECOND_HALF" || phase === "ET";
+}
+
+function formatClock(phase: Phase, effectiveElapsedSeconds: number) {
+  const totalSeconds = Math.max(0, Math.floor(effectiveElapsedSeconds));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  const pad2 = (n: number) => (n < 10 ? `0${n}` : String(n));
+
+  // Extra time formatting
+  if (minutes >= 90) {
+    return `90+${minutes - 90}`;
+  }
+  if (minutes >= 45 && minutes < 60) {
+    return `45+${minutes - 45}`;
+  }
+
+  return `${minutes}:${pad2(seconds)}`;
+}
+
+const MatchReportHeader = ({
+  match,
+  controls,
+  score,
+}: MatchReportHeaderProps) => {
   const {
     startMatch,
     endFirstHalf,
@@ -46,56 +66,34 @@ const MatchReportHeader = ({ match, controls }: MatchReportHeaderProps) => {
 
   if (!match) return null;
 
-  // Frontend clock & phase hydrated from backend
-  const [phase, setPhase] = useState<Phase>(() => match.phase ?? "PRE");
-  const [startTime, setStartTime] = useState<number | null>(() => {
-    if (match.clockStartedAt) return new Date(match.clockStartedAt).getTime();
-    return null;
-  });
-  const [elapsedMs, setElapsedMs] = useState(
-    () => (match.elapsedSeconds ?? 0) * 1000,
-  );
+  const phase: Phase = match.phase ?? "PRE";
 
-  // Simple undo support (frontend only)
-  const [lastPhase, setLastPhase] = useState<Phase | null>(null);
-  const [lastElapsedMs, setLastElapsedMs] = useState<number | null>(null);
-
-  const snapshot = () => {
-    setLastPhase(phase);
-    setLastElapsedMs(elapsedMs);
-  };
-
-  const isRunning =
-    phase === "FIRST_HALF" || phase === "SECOND_HALF" || phase === "ET";
+  // Tick purely for displaying derived live time; backend clock remains source of truth.
+  const [tick, setTick] = useState(0);
 
   useEffect(() => {
-    if (!isRunning || startTime == null) return;
-
-    const tick = () => {
-      setElapsedMs(Date.now() - startTime);
-    };
-
-    tick();
-    const id = window.setInterval(tick, 1000);
+    if (!isRunningPhase(phase)) return;
+    const id = window.setInterval(
+      () => setTick((t) => (t + 1) % 1000000),
+      1000,
+    );
     return () => window.clearInterval(id);
-  }, [isRunning, startTime]);
+  }, [phase]);
 
-  const minutesSeconds = useMemo(() => {
-    const totalSeconds = Math.max(0, Math.floor(elapsedMs / 1000));
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    const pad2 = (n: number) => (n < 10 ? `0${n}` : String(n));
+  const effectiveElapsedSeconds = useMemo(() => {
+    const base = match.elapsedSeconds ?? 0;
+    const startedAt = match.clockStartedAt
+      ? new Date(match.clockStartedAt).getTime()
+      : null;
+    if (!isRunningPhase(phase) || !startedAt) return base;
+    const delta = Math.max(0, Math.floor((Date.now() - startedAt) / 1000));
+    return base + delta;
+  }, [match.clockStartedAt, match.elapsedSeconds, phase, tick]);
 
-    // Extra time formatting
-    if (minutes >= 90) {
-      return `90+${minutes - 90}`;
-    }
-    if (minutes >= 45 && minutes < 60) {
-      return `45+${minutes - 45}`;
-    }
-
-    return `${minutes}:${pad2(seconds)}`;
-  }, [elapsedMs, phase]);
+  const minutesSeconds = useMemo(
+    () => formatClock(phase, effectiveElapsedSeconds),
+    [effectiveElapsedSeconds, phase],
+  );
 
   const phaseLabel = useMemo(() => {
     switch (phase) {
@@ -115,51 +113,12 @@ const MatchReportHeader = ({ match, controls }: MatchReportHeaderProps) => {
     }
   }, [phase]);
 
-  const handleStartMatch = () => {
-    snapshot();
-    setPhase("FIRST_HALF");
-    const now = Date.now();
-    setStartTime(now);
-    setElapsedMs(0);
-    startMatch();
-  };
-
-  const handleEndFirstHalf = () => {
-    snapshot();
-    setPhase("HT");
-    // clock freezes automatically because isRunning becomes false
-    endFirstHalf();
-  };
-
-  const handleStartSecondHalf = () => {
-    // resume from current elapsed
-    snapshot();
-    const now = Date.now();
-    setStartTime(now - elapsedMs);
-    setPhase("SECOND_HALF");
-    startSecondHalf();
-  };
-
-  const handleAddExtraTime = () => {
-    const minutes = Math.floor(elapsedMs / 60000);
-    // Only meaningful once we've crossed 45' (first half) or 90' (second half)
-    if (minutes < 45 && minutes < 90) return;
-    snapshot();
-    setPhase("ET");
-    addExtraTime(minutes);
-  };
-
-  const handleEndMatch = () => {
-    snapshot();
-    setPhase("FT");
-    endMatch();
-  };
-
-  const handleUndo = () => {
-    if (!lastPhase) return;
-    setPhase(lastPhase);
-    if (lastElapsedMs !== null) setElapsedMs(lastElapsedMs);
-  };
+  const handleStartMatch = () => startMatch();
+  const handleEndFirstHalf = () => endFirstHalf();
+  const handleStartSecondHalf = () => startSecondHalf();
+  const handleAddExtraTime = () =>
+    addExtraTime(Math.floor(effectiveElapsedSeconds / 60));
+  const handleEndMatch = () => endMatch();
 
   return (
     <>
@@ -173,7 +132,9 @@ const MatchReportHeader = ({ match, controls }: MatchReportHeaderProps) => {
           </div>
 
           <div className="text-center">
-            <div className="text-gray-2 text-5xl font-bold">0 - 0</div>
+            <div className="text-gray-2 text-5xl font-bold">
+              {score.home} - {score.away}
+            </div>
             <div className="text-blue-2 font-medium">
               {phaseLabel}
               {phase === "PRE"
@@ -279,16 +240,6 @@ const MatchReportHeader = ({ match, controls }: MatchReportHeaderProps) => {
 
           {phase === "FT" && (
             <div className="px-4 py-2 font-semibold text-gray-500">FT</div>
-          )}
-
-          {lastPhase && (
-            <button
-              onClick={handleUndo}
-              disabled={isLoading}
-              className="border-gray-3 text-gray-3 rounded-md border px-4 py-2 text-sm shadow disabled:opacity-50"
-            >
-              Undo Last Action
-            </button>
           )}
         </div>
       </div>
