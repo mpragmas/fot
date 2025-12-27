@@ -98,6 +98,7 @@ model Season {
   leagueId    Int
   startDate   DateTime
   endDate     DateTime
+  totalRounds Int?
   fixtures    Fixture[]
   playerStats PlayerStat[]
   createdAt   DateTime  @default(now())
@@ -154,8 +155,11 @@ model Fixture {
   date        DateTime
   stadium     String?
   referee     String?
+  roundNumber Int       @default(1)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+
+  @@index([seasonId, roundNumber, date])
 }
 
 model Match {

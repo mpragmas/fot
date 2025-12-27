@@ -63,6 +63,7 @@ export async function POST(req: NextRequest) {
         date: new Date(body.date),
         stadium: body.stadium ?? null,
         referee: body.referee ?? null,
+        roundNumber: body.roundNumber ?? 1,
       },
     });
 

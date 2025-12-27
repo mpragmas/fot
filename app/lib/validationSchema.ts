@@ -33,6 +33,7 @@ export const seasonSchema = z.object({
   leagueId: z.number().min(1, "League is required"),
   startDate: z.string().min(1, "Start date is required"),
   endDate: z.string().min(1, "End date is required"),
+  totalRounds: z.number().int().min(1).optional(),
 });
 
 export const patchSeasonSchema = z.object({
@@ -40,6 +41,7 @@ export const patchSeasonSchema = z.object({
   leagueId: z.number().optional(),
   startDate: z.string().optional(),
   endDate: z.string().optional(),
+  totalRounds: z.number().int().min(1).optional(),
 });
 
 export const teamSchema = z.object({
@@ -68,6 +70,7 @@ export const fixtureSchema = z.object({
   date: z.string().min(1, "Date is required"),
   stadium: z.string().optional().nullable(),
   referee: z.string().optional().nullable(),
+  roundNumber: z.number().int().min(1).optional(),
 });
 
 export const patchFixtureSchema = z.object({
@@ -77,6 +80,7 @@ export const patchFixtureSchema = z.object({
   date: z.string().optional(),
   stadium: z.string().optional().nullable(),
   referee: z.string().optional().nullable(),
+  roundNumber: z.number().int().min(1).optional(),
 });
 
 export const matchStatusEnum = z.enum(["UPCOMING", "LIVE", "COMPLETED"]);

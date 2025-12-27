@@ -52,7 +52,7 @@ export const resolveSeasonForLeague = cache(
     if (seasonIdParam && Number.isFinite(seasonIdParam)) {
       const season = await prisma.season.findFirst({
         where: { id: seasonIdParam, leagueId },
-        select: { id: true, year: true, leagueId: true },
+        select: { id: true, year: true, leagueId: true, totalRounds: true },
       });
       if (season) return season;
     }
@@ -60,7 +60,7 @@ export const resolveSeasonForLeague = cache(
     const latest = await prisma.season.findFirst({
       where: { leagueId },
       orderBy: [{ startDate: "desc" }, { id: "desc" }],
-      select: { id: true, year: true, leagueId: true },
+      select: { id: true, year: true, leagueId: true, totalRounds: true },
     });
 
     return latest;
@@ -76,6 +76,198 @@ export type LeagueMatchCard = {
   time?: string;
   date?: string;
 };
+
+export type LeagueFixtureRow = {
+  fixtureId: number;
+  date: Date;
+  homeTeam: string;
+  awayTeam: string;
+  homeScore?: number;
+  awayScore?: number;
+  status: "UPCOMING" | "LIVE" | "COMPLETED";
+  roundNumber: number;
+};
+
+type Score = { home: number; away: number };
+
+function emptyScore(): Score {
+  return { home: 0, away: 0 };
+}
+
+function addGoal(
+  score: Score,
+  goalFor: "HOME" | "AWAY",
+  goalType: "GOAL" | "OWN_GOAL",
+) {
+  const side: "HOME" | "AWAY" =
+    goalType === "OWN_GOAL" ? (goalFor === "HOME" ? "AWAY" : "HOME") : goalFor;
+
+  if (side === "HOME") score.home += 1;
+  else score.away += 1;
+}
+
+export const getLeagueFixturesInRange = cache(
+  async (
+    seasonId: number,
+    startInclusive: Date,
+    endExclusive: Date,
+  ): Promise<LeagueFixtureRow[]> => {
+    const fixtures = await prisma.fixture.findMany({
+      where: {
+        seasonId,
+        date: {
+          gte: startInclusive,
+          lt: endExclusive,
+        },
+      },
+      orderBy: [{ date: "asc" }, { id: "asc" }],
+      include: {
+        homeTeam: { select: { id: true, name: true } },
+        awayTeam: { select: { id: true, name: true } },
+        match: { select: { id: true, status: true } },
+      },
+    });
+
+    const matchIds = fixtures
+      .map((f) => f.match?.id)
+      .filter((id): id is number => typeof id === "number");
+
+    const fixtureByMatchId = new Map<number, (typeof fixtures)[number]>();
+    for (const f of fixtures) {
+      if (f.match?.id) fixtureByMatchId.set(f.match.id, f);
+    }
+
+    const goalLikeStats = matchIds.length
+      ? await prisma.matchStat.findMany({
+          where: {
+            matchId: { in: matchIds },
+            type: { in: ["GOAL", "OWN_GOAL"] },
+          },
+          select: {
+            matchId: true,
+            type: true,
+            player: { select: { teamId: true } },
+          },
+        })
+      : [];
+
+    const scoreByMatchId = new Map<number, Score>();
+    for (const id of matchIds) scoreByMatchId.set(id, emptyScore());
+
+    for (const stat of goalLikeStats) {
+      const fixture = fixtureByMatchId.get(stat.matchId);
+      if (!fixture) continue;
+
+      const score = scoreByMatchId.get(stat.matchId);
+      if (!score) continue;
+
+      if (stat.type !== "GOAL" && stat.type !== "OWN_GOAL") continue;
+
+      const goalFor: "HOME" | "AWAY" =
+        stat.player.teamId === fixture.homeTeamId ? "HOME" : "AWAY";
+
+      addGoal(score, goalFor, stat.type as "GOAL" | "OWN_GOAL");
+    }
+
+    return fixtures.map((f) => {
+      const score = f.match?.id ? scoreByMatchId.get(f.match.id) : undefined;
+
+      const showScore =
+        (f.match?.status === "LIVE" || f.match?.status === "COMPLETED") &&
+        score;
+
+      return {
+        fixtureId: f.id,
+        date: f.date,
+        homeTeam: f.homeTeam.name,
+        awayTeam: f.awayTeam.name,
+        homeScore: showScore ? score!.home : undefined,
+        awayScore: showScore ? score!.away : undefined,
+        status: f.match?.status ?? "UPCOMING",
+        roundNumber: (f as any).roundNumber ?? 1,
+      };
+    });
+  },
+);
+
+export const getLeagueFixturesByRound = cache(
+  async (
+    seasonId: number,
+    roundNumber: number,
+  ): Promise<LeagueFixtureRow[]> => {
+    const fixtures = await prisma.fixture.findMany({
+      where: { seasonId, roundNumber },
+      orderBy: [{ date: "asc" }, { id: "asc" }],
+      include: {
+        homeTeam: { select: { id: true, name: true } },
+        awayTeam: { select: { id: true, name: true } },
+        match: { select: { id: true, status: true } },
+      },
+    });
+
+    if (!fixtures.length) return [];
+
+    const matchIds = fixtures
+      .map((f) => f.match?.id)
+      .filter((id): id is number => typeof id === "number");
+
+    const fixtureByMatchId = new Map<number, (typeof fixtures)[number]>();
+    for (const f of fixtures) {
+      if (f.match?.id) fixtureByMatchId.set(f.match.id, f);
+    }
+
+    const goalLikeStats = matchIds.length
+      ? await prisma.matchStat.findMany({
+          where: {
+            matchId: { in: matchIds },
+            type: { in: ["GOAL", "OWN_GOAL"] },
+          },
+          select: {
+            matchId: true,
+            type: true,
+            player: { select: { teamId: true } },
+          },
+        })
+      : [];
+
+    const scoreByMatchId = new Map<number, Score>();
+    for (const id of matchIds) scoreByMatchId.set(id, emptyScore());
+
+    for (const stat of goalLikeStats) {
+      const fixture = fixtureByMatchId.get(stat.matchId);
+      if (!fixture) continue;
+
+      const score = scoreByMatchId.get(stat.matchId);
+      if (!score) continue;
+
+      if (stat.type !== "GOAL" && stat.type !== "OWN_GOAL") continue;
+
+      const goalFor: "HOME" | "AWAY" =
+        stat.player.teamId === fixture.homeTeamId ? "HOME" : "AWAY";
+
+      addGoal(score, goalFor, stat.type as "GOAL" | "OWN_GOAL");
+    }
+
+    return fixtures.map((f) => {
+      const score = f.match?.id ? scoreByMatchId.get(f.match.id) : undefined;
+
+      const showScore =
+        (f.match?.status === "LIVE" || f.match?.status === "COMPLETED") &&
+        score;
+
+      return {
+        fixtureId: f.id,
+        date: f.date,
+        homeTeam: f.homeTeam.name,
+        awayTeam: f.awayTeam.name,
+        homeScore: showScore ? score!.home : undefined,
+        awayScore: showScore ? score!.away : undefined,
+        status: f.match?.status ?? "UPCOMING",
+        roundNumber: f.roundNumber,
+      };
+    });
+  },
+);
 
 export const getLeagueMatchCards = cache(
   async (seasonId: number, take = 5): Promise<LeagueMatchCard[]> => {
@@ -101,9 +293,13 @@ export const getLeagueMatchCards = cache(
 
     const goalStats = matchIds.length
       ? await prisma.matchStat.findMany({
-          where: { matchId: { in: matchIds }, type: "GOAL" },
+          where: {
+            matchId: { in: matchIds },
+            type: { in: ["GOAL", "OWN_GOAL"] },
+          },
           select: {
             matchId: true,
+            type: true,
             player: { select: { teamId: true } },
           },
         })
@@ -122,8 +318,12 @@ export const getLeagueMatchCards = cache(
       const fixture = fixtureByMatchId.get(stat.matchId);
       if (!fixture) continue;
 
-      if (stat.player.teamId === fixture.homeTeamId) score.home += 1;
-      else if (stat.player.teamId === fixture.awayTeamId) score.away += 1;
+      if (stat.type !== "GOAL" && stat.type !== "OWN_GOAL") continue;
+
+      const goalFor: "HOME" | "AWAY" =
+        stat.player.teamId === fixture.homeTeamId ? "HOME" : "AWAY";
+
+      addGoal(score, goalFor, stat.type as "GOAL" | "OWN_GOAL");
     }
 
     return fixtures.map((f) => {
@@ -268,6 +468,188 @@ export const getSeasonTopStats = cache(async (seasonId: number) => {
   }));
 
   return { topRated, topScorers, topAssists };
+});
+
+export type PlayerStatListItem = {
+  playerId: number;
+  playerName: string;
+  value: number;
+};
+
+function normalizePlayerName(
+  firstName?: string | null,
+  lastName?: string | null,
+) {
+  return [firstName, lastName].filter(Boolean).join(" ").trim();
+}
+
+function positionWhere(pos?: string) {
+  const p = (pos ?? "").toLowerCase();
+  if (!p || p === "all") return undefined;
+
+  const variants: string[] =
+    p === "forwards" || p === "forward" || p === "fwd"
+      ? ["FWD", "FW", "Forward", "Foward", "Striker"]
+      : p === "midfielder" || p === "midfielders" || p === "mid"
+        ? ["MID", "MF", "Midfielder"]
+        : p === "defender" || p === "defenders" || p === "def"
+          ? ["DEF", "DF", "Defender"]
+          : p === "goalkeeper" || p === "goalkeepers" || p === "gk"
+            ? ["GK", "Goalkeeper", "Keeper"]
+            : [];
+
+  if (variants.length === 0) return undefined;
+
+  return {
+    OR: variants.map((v) => ({
+      position: {
+        equals: v,
+        mode: "insensitive" as const,
+      },
+    })),
+  };
+}
+
+export const getSeasonPlayerStatLeaders = cache(
+  async (
+    seasonId: number,
+    metric: "goals" | "assists" | "ga",
+    pos: string | undefined,
+    page: number,
+    take: number,
+  ) => {
+    const wherePos = positionWhere(pos);
+
+    const where = {
+      seasonId,
+      ...(wherePos
+        ? {
+            player: wherePos,
+          }
+        : {}),
+    };
+
+    const orderBy =
+      metric === "assists"
+        ? ([
+            { assists: "desc" },
+            { goals: "desc" },
+            { playerId: "asc" },
+          ] as const)
+        : metric === "ga"
+          ? ([
+              { goals: "desc" },
+              { assists: "desc" },
+              { playerId: "asc" },
+            ] as const)
+          : ([
+              { goals: "desc" },
+              { assists: "desc" },
+              { playerId: "asc" },
+            ] as const);
+
+    const skip = Math.max(0, page) * take;
+
+    const [rows, total] = await Promise.all([
+      prisma.playerStat.findMany({
+        where,
+        orderBy: [...orderBy],
+        skip,
+        take,
+        include: {
+          player: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+        },
+      }),
+      prisma.playerStat.count({ where }),
+    ]);
+
+    const data: PlayerStatListItem[] = rows.map((r) => {
+      const name = normalizePlayerName(r.player.firstName, r.player.lastName);
+      const value =
+        metric === "assists"
+          ? r.assists
+          : metric === "ga"
+            ? r.goals + r.assists
+            : r.goals;
+      return {
+        playerId: r.player.id,
+        playerName: name || `Player ${r.player.id}`,
+        value,
+      };
+    });
+
+    return { total, data };
+  },
+);
+
+export type TeamStatCardItem = {
+  name: string;
+  team: string;
+  teamLogo: string;
+  value: string | number;
+};
+
+export const getSeasonTopTeamStats = cache(async (seasonId: number) => {
+  const rows = await prisma.playerStat.findMany({
+    where: { seasonId },
+    select: {
+      goals: true,
+      assists: true,
+      player: {
+        select: {
+          team: { select: { id: true, name: true } },
+        },
+      },
+    },
+  });
+
+  const byTeam = new Map<
+    number,
+    { name: string; goals: number; assists: number }
+  >();
+
+  for (const r of rows) {
+    const team = r.player.team;
+    if (!team) continue;
+
+    const existing = byTeam.get(team.id) ?? {
+      name: team.name,
+      goals: 0,
+      assists: 0,
+    };
+    existing.goals += r.goals;
+    existing.assists += r.assists;
+    byTeam.set(team.id, existing);
+  }
+
+  const all = Array.from(byTeam.values());
+  const topGoals = [...all].sort((a, b) => b.goals - a.goals).slice(0, 3);
+  const topAssists = [...all].sort((a, b) => b.assists - a.assists).slice(0, 3);
+  const topGA = [...all]
+    .sort((a, b) => b.goals + b.assists - (a.goals + a.assists))
+    .slice(0, 3);
+
+  const toCard = (
+    t: { name: string; goals: number; assists: number },
+    value: number,
+  ): TeamStatCardItem => ({
+    name: t.name,
+    team: t.name,
+    teamLogo: DEFAULT_LOGO,
+    value: String(value),
+  });
+
+  return {
+    topScorers: topGoals.map((t) => toCard(t, t.goals)),
+    topAssists: topAssists.map((t) => toCard(t, t.assists)),
+    topRated: topGA.map((t) => toCard(t, t.goals + t.assists)),
+  };
 });
 
 export const getTeamOfWeekPlayers = cache(

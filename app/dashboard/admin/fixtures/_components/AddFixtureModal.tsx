@@ -29,6 +29,7 @@ const AddFixtureModal = ({ open, onClose }: AddFixtureModalProps) => {
   const [date, setDate] = useState("");
   const [stadium, setStadium] = useState("");
   const [referee, setReferee] = useState("");
+  const [roundNumber, setRoundNumber] = useState<string>("1");
   const [formError, setFormError] = useState<string | null>(null);
 
   const handleSubmit = async (e: FormEvent) => {
@@ -49,6 +50,7 @@ const AddFixtureModal = ({ open, onClose }: AddFixtureModalProps) => {
       date,
       stadium: stadium || undefined,
       referee: referee || undefined,
+      roundNumber: roundNumber ? Number(roundNumber) : undefined,
     });
 
     setSeasonId("");
@@ -57,6 +59,7 @@ const AddFixtureModal = ({ open, onClose }: AddFixtureModalProps) => {
     setDate("");
     setStadium("");
     setReferee("");
+    setRoundNumber("1");
     onClose();
   };
 
@@ -76,7 +79,7 @@ const AddFixtureModal = ({ open, onClose }: AddFixtureModalProps) => {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           <div>
             <label className="mb-1 block text-sm font-medium">League</label>
             <select
@@ -178,6 +181,16 @@ const AddFixtureModal = ({ open, onClose }: AddFixtureModalProps) => {
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 focus:outline-none"
               value={stadium}
               onChange={(e) => setStadium(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium">Round</label>
+            <input
+              type="number"
+              min={1}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 focus:outline-none"
+              value={roundNumber}
+              onChange={(e) => setRoundNumber(e.target.value)}
             />
           </div>
         </div>

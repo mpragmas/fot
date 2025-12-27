@@ -256,8 +256,8 @@ export default function LiveTimelineSection({
           {/* Vertical center line */}
           <div className="bg-gray-2 absolute inset-y-0 left-1/2 w-px -translate-x-1/2" />
 
-          {sortedEvents.map((event) => (
-            <div key={event.id}>
+          {sortedEvents.map((event, index) => (
+            <div key={`${event.id}-${index}`}>
               {editingId === event.id ? (
                 <div className="mb-8 rounded-lg border border-gray-200 p-4">
                   <div className="grid grid-cols-1 gap-3 md:grid-cols-4">

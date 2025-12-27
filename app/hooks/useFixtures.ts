@@ -30,6 +30,7 @@ export type ApiFixture = {
   } | null;
   date: string;
   stadium: string | null;
+  roundNumber: number;
 };
 
 export type FixtureItem = {
@@ -41,6 +42,7 @@ export type FixtureItem = {
   awayTeamName: string;
   date: string;
   stadium: string | null;
+  roundNumber: number;
   status: FixtureStatus;
   reporterId: number | null;
   reporterName: string | null;
@@ -70,6 +72,7 @@ export function useFixtures() {
       awayTeamName: f.awayTeam.name,
       date: f.date,
       stadium: f.stadium,
+      roundNumber: f.roundNumber,
       status: f.match?.status ?? "UPCOMING",
       reporterId: f.match?.reporterId ?? null,
       reporterName: f.match?.reporter?.name ?? null,
@@ -92,6 +95,7 @@ interface CreateFixtureInput {
   date: string;
   stadium?: string;
   referee?: string;
+  roundNumber?: number;
 }
 
 interface UpdateFixtureInput {
@@ -102,6 +106,7 @@ interface UpdateFixtureInput {
   date?: string;
   stadium?: string | null;
   referee?: string | null;
+  roundNumber?: number;
 }
 
 export function useCreateFixture() {

@@ -20,6 +20,7 @@ export default function FixturesPage() {
   const [selectedLeagueId, setSelectedLeagueId] = useState<number | "">("");
   const [selectedTeamId, setSelectedTeamId] = useState<number | "">("");
   const [selectedStatus, setSelectedStatus] = useState<"" | FixtureStatus>("");
+  const [selectedRound, setSelectedRound] = useState<number | "">("");
 
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingFixture, setEditingFixture] = useState<FixtureItem | null>(
@@ -60,9 +61,13 @@ export default function FixturesPage() {
           return false;
         }
 
+        if (typeof selectedRound === "number") {
+          if (fixture.roundNumber !== selectedRound) return false;
+        }
+
         return true;
       }),
-    [fixtures, selectedLeagueId, selectedTeamId, selectedStatus],
+    [fixtures, selectedLeagueId, selectedTeamId, selectedStatus, selectedRound],
   );
 
   return (
@@ -120,6 +125,18 @@ export default function FixturesPage() {
           <option value="COMPLETED">Completed</option>
         </select>
 
+        <input
+          type="number"
+          min={1}
+          placeholder="Round"
+          className="w-20 rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700"
+          value={selectedRound === "" ? "" : selectedRound}
+          onChange={(e) => {
+            const value = e.target.value;
+            setSelectedRound(value ? Number(value) : "");
+          }}
+        />
+
         {/* + Reporter Button */}
         <button
           className="flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
@@ -149,6 +166,7 @@ export default function FixturesPage() {
               <tr className="text-left text-xs font-semibold text-gray-600">
                 <th className="px-6 py-3">Match</th>
                 <th className="px-6 py-3">Date</th>
+                <th className="px-6 py-3">Round</th>
                 <th className="px-6 py-3">Stadium</th>
                 <th className="px-6 py-3">Status</th>
                 <th className="px-6 py-3">Reporter</th>
@@ -175,6 +193,9 @@ export default function FixturesPage() {
                     </td>
                     <td className="px-6 py-4 text-gray-600">
                       {new Date(fixture.date).toLocaleString()}
+                    </td>
+                    <td className="px-6 py-4 text-gray-600">
+                      {fixture.roundNumber ?? "-"}
                     </td>
                     <td className="px-6 py-4 text-gray-600">
                       {fixture.stadium}

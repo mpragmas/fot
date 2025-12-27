@@ -46,6 +46,7 @@ export async function POST(req: NextRequest) {
         leagueId: body.leagueId,
         startDate: new Date(body.startDate),
         endDate: new Date(body.endDate),
+        totalRounds: body.totalRounds ?? null,
       },
     });
 

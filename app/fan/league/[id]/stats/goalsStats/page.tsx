@@ -2,13 +2,80 @@ import LeftArrow from "@/app/ui/LeftArrow";
 import React from "react";
 import Image from "next/image";
 import RightArrow from "@/app/ui/RightArrow";
+import Link from "next/link";
+import {
+  getSeasonPlayerStatLeaders,
+  resolveSeasonForLeague,
+} from "../../../_lib/leagueData";
+import { notFound } from "next/navigation";
 
-const page = () => {
+type GoalsStatsPageProps = {
+  params: Promise<{ id: string }>;
+  searchParams?: Promise<{
+    seasonId?: string;
+    metric?: string;
+    pos?: string;
+    page?: string;
+  }>;
+};
+
+const page = async ({ params, searchParams }: GoalsStatsPageProps) => {
+  const { id } = await params;
+  const leagueId = Number(id);
+  if (!Number.isFinite(leagueId)) {
+    notFound();
+  }
+
+  const sp = (await searchParams) ?? {};
+  const seasonIdParam = sp.seasonId ? Number(sp.seasonId) : undefined;
+  const season = await resolveSeasonForLeague(leagueId, seasonIdParam);
+  if (!season) {
+    notFound();
+  }
+
+  const metric =
+    sp.metric === "assists" ? "assists" : sp.metric === "ga" ? "ga" : "goals";
+  const pos = sp.pos;
+  const pageIndex = Math.max(0, Number(sp.page ?? "0") || 0);
+  const take = 10;
+
+  const { total, data } = await getSeasonPlayerStatLeaders(
+    season.id,
+    metric,
+    pos,
+    pageIndex,
+    take,
+  );
+
+  const base = `/fan/league/${leagueId}/stats/goalsStats`;
+  const common = `seasonId=${season.id}&metric=${metric}`;
+  const posParam = pos ? `&pos=${encodeURIComponent(pos)}` : "";
+  const start = total === 0 ? 0 : pageIndex * take + 1;
+  const end = Math.min(total, (pageIndex + 1) * take);
+
+  const prevHref =
+    pageIndex > 0
+      ? `${base}?${common}${posParam}&page=${pageIndex - 1}`
+      : undefined;
+  const nextHref =
+    end < total
+      ? `${base}?${common}${posParam}&page=${pageIndex + 1}`
+      : undefined;
+
+  const title =
+    metric === "assists"
+      ? "Top assists"
+      : metric === "ga"
+        ? "Goals + Assists"
+        : "Top scorer";
+
+  const backHref = `/fan/league/${leagueId}/stats?seasonId=${season.id}`;
+
   return (
     <div className="dark:text-whitish dark:bg-dark-1 mt-10 rounded-2xl p-5">
       <div className="dark:border-dark-2 w-ful flex items-center gap-3 border-b pb-3">
-        <LeftArrow />
-        <p>Back</p>
+        <LeftArrow href={backHref} />
+        <Link href={backHref}>Back</Link>
       </div>
       <div className="dark:border-dark-2 flex items-center gap-3 border-b py-3">
         <Image src="/images/logo.png" alt="" width={30} height={30} />
@@ -16,25 +83,60 @@ const page = () => {
         <p>Player stats</p>
       </div>
       <h1 className="text-dark-5 dark:border-dark-2 border-b py-3 text-2xl font-extrabold">
-        Top scorer
+        {title}
       </h1>
 
       <div className="flex items-center gap-3 py-4">
-        <button className="bg-whitish text-dark dark:bg-whitish dark:text-dark rounded-full px-4 py-1 text-sm font-medium">
+        <Link
+          href={`${base}?${common}`}
+          className={`rounded-full px-4 py-1 text-sm font-medium ${
+            !pos
+              ? "bg-whitish text-dark dark:bg-whitish dark:text-dark"
+              : "bg-dark text-whitish dark:bg-dark-4 dark:text-whitish"
+          }`}
+        >
           All
-        </button>
-        <button className="bg-dark text-whitish dark:bg-dark-4 dark:text-whitish rounded-full px-4 py-1 text-sm font-medium">
+        </Link>
+        <Link
+          href={`${base}?${common}&pos=forwards`}
+          className={`rounded-full px-4 py-1 text-sm font-medium ${
+            pos === "forwards"
+              ? "bg-whitish text-dark dark:bg-whitish dark:text-dark"
+              : "bg-dark text-whitish dark:bg-dark-4 dark:text-whitish"
+          }`}
+        >
           Fowards
-        </button>
-        <button className="bg-dark text-whitish dark:bg-dark-4 dark:text-whitish rounded-full px-4 py-1 text-sm font-medium">
+        </Link>
+        <Link
+          href={`${base}?${common}&pos=midfielder`}
+          className={`rounded-full px-4 py-1 text-sm font-medium ${
+            pos === "midfielder"
+              ? "bg-whitish text-dark dark:bg-whitish dark:text-dark"
+              : "bg-dark text-whitish dark:bg-dark-4 dark:text-whitish"
+          }`}
+        >
           Midfielder
-        </button>
-        <button className="bg-dark text-whitish dark:bg-dark-4 dark:text-whitish rounded-full px-4 py-1 text-sm font-medium">
+        </Link>
+        <Link
+          href={`${base}?${common}&pos=defender`}
+          className={`rounded-full px-4 py-1 text-sm font-medium ${
+            pos === "defender"
+              ? "bg-whitish text-dark dark:bg-whitish dark:text-dark"
+              : "bg-dark text-whitish dark:bg-dark-4 dark:text-whitish"
+          }`}
+        >
           Defender
-        </button>
-        <button className="bg-dark text-whitish dark:bg-dark-4 dark:text-whitish rounded-full px-4 py-1 text-sm font-medium">
+        </Link>
+        <Link
+          href={`${base}?${common}&pos=goalkeeper`}
+          className={`rounded-full px-4 py-1 text-sm font-medium ${
+            pos === "goalkeeper"
+              ? "bg-whitish text-dark dark:bg-whitish dark:text-dark"
+              : "bg-dark text-whitish dark:bg-dark-4 dark:text-whitish"
+          }`}
+        >
           Goalkeeper
-        </button>
+        </Link>
       </div>
 
       <div className="space-y-4">
@@ -45,23 +147,30 @@ const page = () => {
           </div>
           <p>Stats</p>
         </div>
-        <div className="dark:border-dark-2 flex items-center justify-between border-b pb-3">
-          <div className="flex items-center gap-5">
-            <p>1</p>
-            <Image src="/images/logo.png" alt="" width={50} height={50} />
-            <p>Player Name</p>
+        {data.map((row, idx) => (
+          <div
+            key={row.playerId}
+            className="dark:border-dark-2 flex items-center justify-between border-b pb-3"
+          >
+            <div className="flex items-center gap-5">
+              <p>{pageIndex * take + idx + 1}</p>
+              <Image src="/images/logo.png" alt="" width={50} height={50} />
+              <p>{row.playerName}</p>
+            </div>
+            <p className="pr-2">{row.value}</p>
           </div>
-          <p className="pr-2">6</p>
-        </div>
+        ))}
         <div className="text-dark-3 flex items-center justify-between text-sm font-bold">
           <div className="flex items-center gap-3">
-            <LeftArrow />
-            <p>Previous</p>
+            <LeftArrow href={prevHref} />
+            {prevHref ? <Link href={prevHref}>Previous</Link> : <p>Previous</p>}
           </div>
-          <p>1-10 of 35</p>
+          <p>
+            {start}-{end} of {total}
+          </p>
           <div className="flex items-center gap-3">
-            <p>Next</p>
-            <RightArrow />
+            {nextHref ? <Link href={nextHref}>Next</Link> : <p>Next</p>}
+            <RightArrow href={nextHref} />
           </div>
         </div>
       </div>
