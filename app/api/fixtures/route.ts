@@ -20,15 +20,44 @@ export async function GET(req: NextRequest) {
     const data = await prisma.fixture.findMany({
       ...queryOptions,
       include: {
-        season: true,
-        homeTeam: true,
-        awayTeam: true,
+        season: {
+          include: {
+            league: true,
+          },
+        },
+        homeTeam: {
+          include: {
+            players: {
+              select: { id: true },
+            },
+          },
+        },
+        awayTeam: {
+          include: {
+            players: {
+              select: { id: true },
+            },
+          },
+        },
         match: {
           include: {
             reporter: {
               select: {
                 id: true,
                 name: true,
+              },
+            },
+            stats: {
+              select: {
+                id: true,
+                playerId: true,
+                type: true,
+                minute: true,
+                player: {
+                  select: {
+                    teamId: true,
+                  },
+                },
               },
             },
           },

@@ -97,6 +97,8 @@ export default function MatchControlPage() {
     queryKey: ["match", matchId],
     queryFn: () => fetchMatch(matchId),
     enabled: !!matchId,
+    // Fast-ish polling to keep clock & stats fresh as a fallback to sockets
+    refetchInterval: 3000,
   });
 
   useMatchRoomSocket(matchId);

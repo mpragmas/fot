@@ -74,6 +74,8 @@ export function useReporterMatches(options: ReporterMatchesOptions = {}) {
     queryFn: () => fetchReporterMatches(reporterId, options),
     enabled: !!reporterId,
     staleTime: 1000 * 60 * 2, // 2 mins
+    // Background polling so assigned matches update without manual reload
+    refetchInterval: 5000,
   });
 
   useMatchStatusSocket(reporterId);

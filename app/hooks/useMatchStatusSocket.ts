@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { io, Socket } from "socket.io-client";
 import { useQueryClient } from "@tanstack/react-query";
 import { ReporterMatchStatus } from "./userReporterMatchs";
-import type { ApiFixture, FixtureStatus } from "./useFixtures";
+import type { ApiFixture, FixtureStatus, MatchPhase } from "./useFixtures";
 
 let socket: Socket | null = null;
 
@@ -35,7 +35,7 @@ export function useMatchStatusSocket(reporterId?: number | null) {
     const handler = (payload: {
       id: number;
       status?: ReporterMatchStatus;
-      phase?: string | null;
+      phase?: MatchPhase | null;
       elapsedSeconds?: number;
       clockStartedAt?: string | null;
       clockPausedAt?: string | null;
@@ -87,13 +87,27 @@ export function useMatchStatusSocket(reporterId?: number | null) {
         let changed = false;
         const next = old.map((fixture) => {
           if (!fixture.match || fixture.match.id !== payload.id) return fixture;
-          if (!payload.status) return fixture;
+          if (
+            !payload.status &&
+            payload.phase == null &&
+            payload.elapsedSeconds == null
+          ) {
+            return fixture;
+          }
           changed = true;
           return {
             ...fixture,
             match: {
               ...fixture.match,
-              status: payload.status as FixtureStatus,
+              ...(payload.status
+                ? { status: payload.status as FixtureStatus }
+                : {}),
+              ...(payload.phase !== undefined && payload.phase !== null
+                ? { phase: payload.phase }
+                : {}),
+              ...(typeof payload.elapsedSeconds === "number"
+                ? { elapsedSeconds: payload.elapsedSeconds }
+                : {}),
             },
           };
         });
