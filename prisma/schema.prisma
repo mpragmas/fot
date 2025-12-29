@@ -171,6 +171,8 @@ model Match {
   phase              MatchPhase @default(PRE)
   elapsedSeconds     Int        @default(0)
   clockStartedAt     DateTime?
+  homeScore         Int        @default(0)
+  awayScore         Int        @default(0)
   reporter    User?     @relation("ReporterMatches", fields: [reporterId], references: [id])
   reporterId  Int?
   lineups     Lineup[]

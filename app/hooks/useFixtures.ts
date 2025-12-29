@@ -40,21 +40,13 @@ export type ApiFixture = {
     phase: MatchPhase;
     elapsedSeconds: number;
     clockStartedAt: string | null;
+    homeScore: number;
+    awayScore: number;
     reporterId: number | null;
     reporter: {
       id: number;
       name: string | null;
     } | null;
-    stats: {
-      id: number;
-      playerId: number;
-      type: "GOAL" | "OWN_GOAL";
-      minute: number;
-      // player relation might or might not be loaded; it's not required for score calc
-      player?: {
-        teamId: number | null;
-      } | null;
-    }[];
   } | null;
   date: string;
   stadium: string | null;
@@ -82,34 +74,6 @@ export type FixtureItem = {
   reporterId: number | null;
   reporterName: string | null;
 };
-
-function computeScoreFromStats(
-  stats: {
-    playerId: number;
-    type: "GOAL" | "OWN_GOAL";
-  }[],
-  homePlayerIds: Set<number>,
-  awayPlayerIds: Set<number>,
-) {
-  let home = 0;
-  let away = 0;
-
-  for (const s of stats) {
-    const isHomePlayer = homePlayerIds.has(s.playerId);
-    const isAwayPlayer = awayPlayerIds.has(s.playerId);
-    if (!isHomePlayer && !isAwayPlayer) continue;
-
-    if (s.type === "GOAL") {
-      if (isHomePlayer) home += 1;
-      else away += 1;
-    } else if (s.type === "OWN_GOAL") {
-      if (isHomePlayer) away += 1;
-      else home += 1;
-    }
-  }
-
-  return { home, away };
-}
 
 async function fetchFixtures(): Promise<ApiFixture[]> {
   const res = await fetch("/api/fixtures");
@@ -144,16 +108,8 @@ export function useFixtures() {
       phase: f.match?.phase ?? null,
       elapsedSeconds: f.match?.elapsedSeconds ?? null,
       clockStartedAt: f.match?.clockStartedAt ?? null,
-      ...(() => {
-        if (!f.match) return { homeScore: 0, awayScore: 0 };
-        const stats = (f.match.stats ?? []).filter((s) =>
-          ["GOAL", "OWN_GOAL"].includes(s.type),
-        );
-        if (!stats.length) return { homeScore: 0, awayScore: 0 };
-        const homeIds = new Set(f.homeTeam.players.map((p) => p.id));
-        const awayIds = new Set(f.awayTeam.players.map((p) => p.id));
-        return computeScoreFromStats(stats, homeIds, awayIds);
-      })(),
+      homeScore: f.match?.homeScore ?? 0,
+      awayScore: f.match?.awayScore ?? 0,
       reporterId: f.match?.reporterId ?? null,
       reporterName: f.match?.reporter?.name ?? null,
     })) ?? [];

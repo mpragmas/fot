@@ -5,6 +5,64 @@ import { createMatchStatSchema } from "@/app/lib/validationSchema";
 import { ensureSocketStarted, emitStat } from "@/app/lib/socket";
 import { recomputePlayerStatsForMatch } from "@/app/lib/playerStats";
 
+async function recomputeMatchScore(matchId: number) {
+  const match = await prisma.match.findUnique({
+    where: { id: matchId },
+    select: {
+      fixture: {
+        select: {
+          homeTeamId: true,
+          awayTeamId: true,
+        },
+      },
+    },
+  });
+
+  if (!match || !match.fixture) return;
+
+  const { homeTeamId, awayTeamId } = match.fixture;
+
+  const stats = await prisma.matchStat.findMany({
+    where: {
+      matchId,
+      type: { in: ["GOAL", "OWN_GOAL"] },
+    },
+    select: {
+      type: true,
+      player: {
+        select: {
+          teamId: true,
+        },
+      },
+    },
+  });
+
+  let home = 0;
+  let away = 0;
+
+  for (const s of stats) {
+    const teamId = s.player?.teamId;
+    if (teamId == null) continue;
+    const isHome = teamId === homeTeamId;
+    const isAway = teamId === awayTeamId;
+    if (!isHome && !isAway) continue;
+
+    if (s.type === "GOAL") {
+      if (isHome) home += 1;
+      else away += 1;
+    } else {
+      // OWN_GOAL
+      if (isHome) away += 1;
+      else home += 1;
+    }
+  }
+
+  await prisma.match.update({
+    where: { id: matchId },
+    data: { homeScore: home, awayScore: away },
+  });
+}
+
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
@@ -60,6 +118,7 @@ export async function POST(
       emitStat(matchId, stat);
 
       await recomputePlayerStatsForMatch(matchId);
+      await recomputeMatchScore(matchId);
 
       return NextResponse.json(stat, { status: 201 });
     }
@@ -87,6 +146,7 @@ export async function POST(
     if (created.red) emitStat(matchId, created.red);
 
     await recomputePlayerStatsForMatch(matchId);
+    await recomputeMatchScore(matchId);
 
     return NextResponse.json(
       created.red ? [created.yellow, created.red] : created.yellow,
