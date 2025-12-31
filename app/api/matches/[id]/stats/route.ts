@@ -4,11 +4,13 @@ import { handleError } from "@/app/lib/routeError";
 import { createMatchStatSchema } from "@/app/lib/validationSchema";
 import { ensureSocketStarted, emitStat } from "@/app/lib/socket";
 import { recomputePlayerStatsForMatch } from "@/app/lib/playerStats";
+import { updateLeagueTableForMatch } from "@/app/lib/leagueTableService";
 
 async function recomputeMatchScore(matchId: number) {
   const match = await prisma.match.findUnique({
     where: { id: matchId },
     select: {
+      status: true,
       fixture: {
         select: {
           homeTeamId: true,
@@ -61,6 +63,10 @@ async function recomputeMatchScore(matchId: number) {
     where: { id: matchId },
     data: { homeScore: home, awayScore: away },
   });
+
+  if (match.status === "COMPLETED") {
+    await updateLeagueTableForMatch(matchId);
+  }
 }
 
 export async function GET(

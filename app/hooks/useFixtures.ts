@@ -47,6 +47,12 @@ export type ApiFixture = {
       id: number;
       name: string | null;
     } | null;
+    stats: {
+      id: number;
+      playerId: number;
+      type: "GOAL" | "OWN_GOAL";
+      minute: number;
+    }[];
   } | null;
   date: string;
   stadium: string | null;
@@ -74,6 +80,31 @@ export type FixtureItem = {
   reporterId: number | null;
   reporterName: string | null;
 };
+
+function computeScoreFromStats(
+  stats: { playerId: number; type: "GOAL" | "OWN_GOAL" }[],
+  homePlayerIds: Set<number>,
+  awayPlayerIds: Set<number>,
+) {
+  let home = 0;
+  let away = 0;
+
+  for (const s of stats) {
+    const isHomePlayer = homePlayerIds.has(s.playerId);
+    const isAwayPlayer = awayPlayerIds.has(s.playerId);
+    if (!isHomePlayer && !isAwayPlayer) continue;
+
+    if (s.type === "GOAL") {
+      if (isHomePlayer) home += 1;
+      else away += 1;
+    } else if (s.type === "OWN_GOAL") {
+      if (isHomePlayer) away += 1;
+      else home += 1;
+    }
+  }
+
+  return { home, away };
+}
 
 async function fetchFixtures(): Promise<ApiFixture[]> {
   const res = await fetch("/api/fixtures");
@@ -108,8 +139,28 @@ export function useFixtures() {
       phase: f.match?.phase ?? null,
       elapsedSeconds: f.match?.elapsedSeconds ?? null,
       clockStartedAt: f.match?.clockStartedAt ?? null,
-      homeScore: f.match?.homeScore ?? 0,
-      awayScore: f.match?.awayScore ?? 0,
+      ...(() => {
+        if (!f.match) return { homeScore: 0, awayScore: 0 };
+
+        const baseHome = f.match.homeScore ?? 0;
+        const baseAway = f.match.awayScore ?? 0;
+
+        // Fast path: DB already has authoritative scores
+        if (baseHome !== 0 || baseAway !== 0) {
+          return { homeScore: baseHome, awayScore: baseAway };
+        }
+
+        // Fallback: if DB is still 0-0 BUT we have goal stats, recompute on client
+        const stats = (f.match.stats ?? []).filter((s) =>
+          ["GOAL", "OWN_GOAL"].includes(s.type),
+        );
+        if (!stats.length) return { homeScore: baseHome, awayScore: baseAway };
+
+        const homeIds = new Set(f.homeTeam.players.map((p) => p.id));
+        const awayIds = new Set(f.awayTeam.players.map((p) => p.id));
+        const { home, away } = computeScoreFromStats(stats, homeIds, awayIds);
+        return { homeScore: home, awayScore: away };
+      })(),
       reporterId: f.match?.reporterId ?? null,
       reporterName: f.match?.reporter?.name ?? null,
     })) ?? [];

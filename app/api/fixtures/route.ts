@@ -53,11 +53,6 @@ export async function GET(req: NextRequest) {
                 playerId: true,
                 type: true,
                 minute: true,
-                player: {
-                  select: {
-                    teamId: true,
-                  },
-                },
               },
             },
           },

@@ -8,6 +8,7 @@ import type {
 
 export type ClientToServerEvents = {
   join: (payload: { matchId: number }) => void;
+  joinLeague: (payload: { leagueId: number }) => void;
 };
 
 export type ServerToClientEvents = {
@@ -28,6 +29,7 @@ export type ServerToClientEvents = {
     matchId: number;
     status: Match["status"];
   }) => void;
+  "leagueTable:update": (payload: { leagueId: number }) => void;
   "lineup:update": (payload: { matchId: number; lineups: Lineup[] }) => void;
 };
 
@@ -38,6 +40,10 @@ declare global {
 
 function roomName(matchId: number): string {
   return `match:${matchId}`;
+}
+
+function leagueRoomName(leagueId: number): string {
+  return `league:${leagueId}`;
 }
 
 export function getIO(): Server<ClientToServerEvents, ServerToClientEvents> {
@@ -54,6 +60,12 @@ export function getIO(): Server<ClientToServerEvents, ServerToClientEvents> {
         socket.on("join", ({ matchId }: { matchId: number }) => {
           if (Number.isFinite(matchId)) {
             socket.join(roomName(matchId));
+          }
+        });
+
+        socket.on("joinLeague", ({ leagueId }: { leagueId: number }) => {
+          if (Number.isFinite(leagueId)) {
+            socket.join(leagueRoomName(leagueId));
           }
         });
       },
@@ -119,4 +131,9 @@ export function emitMatchUpdated(
 ): void {
   const io = getIO();
   io.to(roomName(matchId)).emit("match:update", { matchId, status });
+}
+
+export function emitLeagueTableUpdated(leagueId: number): void {
+  const io = getIO();
+  io.to(leagueRoomName(leagueId)).emit("leagueTable:update", { leagueId });
 }

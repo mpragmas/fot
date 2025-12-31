@@ -1,4 +1,4 @@
-import Table from "../_components/Table";
+import TableClient from "./table/TableClient";
 import Matches from "../_components/Matches";
 import TeamFormation from "../_components/TeamFormation";
 import TopStats from "@/app/components/TopStats";
@@ -41,16 +41,21 @@ export default async function Overview({
     getSeasonTopStats(season.id),
   ]);
 
+  console.log(seasonTopStats);
+
   return (
     <div className="mt-7 w-full">
-      <Matches
-        matches={matches}
-        allMatchesHref={`/fan/league/${leagueId}/matches?seasonId=${season.id}`}
-      />
+      {matches.length > 2 && (
+        <Matches
+          matches={matches}
+          allMatchesHref={`/fan/league/${leagueId}/matches?seasonId=${season.id}`}
+        />
+      )}
       <div className="mt-5 flex gap-3">
         <div className="w-[70%]">
-          <Table />
-          <TopStats {...seasonTopStats} />
+          <TableClient leagueId={leagueId} seasonId={season.id} />
+
+          {seasonTopStats.topScorers.length>0 && <TopStats {...seasonTopStats} />}
           <NewsSection items={newsItems} />
         </div>
         <div className="w-[30%]">

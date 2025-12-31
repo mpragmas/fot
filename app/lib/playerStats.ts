@@ -8,7 +8,9 @@ type StatAccumulator = {
   redCards: number;
 };
 
-async function recomputePlayerStatsForSeason(seasonId: number): Promise<void> {
+export async function recomputePlayerStatsForSeason(
+  seasonId: number,
+): Promise<void> {
   if (!Number.isFinite(seasonId)) return;
 
   const matchStats = await prisma.matchStat.findMany({

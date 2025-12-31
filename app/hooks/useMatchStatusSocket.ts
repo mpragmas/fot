@@ -9,7 +9,7 @@ import type { ApiFixture, FixtureStatus, MatchPhase } from "./useFixtures";
 let socket: Socket | null = null;
 
 // Optimize: Singleton connection to avoid multiple handshakes
-function getSocket() {
+export function getSocket() {
   if (!socket) {
     socket = io("http://localhost:4000", {
       transports: ["websocket"],

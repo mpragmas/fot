@@ -87,6 +87,7 @@ model League {
   country     String
   seasons     Season[]
   teams       Team[]
+  leagueTables LeagueTable[]
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 }
@@ -101,6 +102,7 @@ model Season {
   totalRounds Int?
   fixtures    Fixture[]
   playerStats PlayerStat[]
+  leagueTables LeagueTable[]
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 }
@@ -119,6 +121,7 @@ model Team {
   fromTransfers    Transfer[] @relation("FromTransfers")
   toTransfers      Transfer[] @relation("ToTransfers")
   proposedTransfers ProposedTransfer[]
+  leagueTables      LeagueTable[]
   isActive         Boolean   @default(true)
   deactivatedAt    DateTime?
   createdAt        DateTime  @default(now())
@@ -191,6 +194,30 @@ model MatchCounters {
   homeCorners       Int     @default(0)
   awayCorners       Int     @default(0)
   updatedAt         DateTime @updatedAt
+}
+
+// ------------------------ LEAGUE TABLE ------------------------
+
+model LeagueTable {
+  id            Int      @id @default(autoincrement())
+  league        League   @relation(fields: [leagueId], references: [id])
+  leagueId      Int
+  season        Season   @relation(fields: [seasonId], references: [id])
+  seasonId      Int
+  team          Team     @relation(fields: [teamId], references: [id])
+  teamId        Int
+  played        Int      @default(0)
+  wins          Int      @default(0)
+  draws         Int      @default(0)
+  losses        Int      @default(0)
+  goalsFor      Int      @default(0)
+  goalsAgainst  Int      @default(0)
+  goalDiff      Int      @default(0)
+  points        Int      @default(0)
+  updatedAt     DateTime @updatedAt
+
+  @@unique([leagueId, seasonId, teamId], name: "LeagueTable_league_season_team_unique")
+  @@index([leagueId, seasonId, points, goalDiff], name: "LeagueTable_league_season_points_goalDiff_idx")
 }
 
 // ------------------------ LINEUPS & MATCH STATS ------------------------

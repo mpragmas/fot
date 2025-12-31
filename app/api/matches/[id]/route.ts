@@ -3,6 +3,10 @@ import prisma from "@/app/lib/prisma";
 import { handleError } from "@/app/lib/routeError";
 import { patchMatchSchema } from "@/app/lib/validationSchema";
 import { ensureSocketStarted } from "@/app/lib/socket";
+import {
+  updateLeagueTableForFixtureTeams,
+  updateLeagueTableForMatch,
+} from "@/app/lib/leagueTableService";
 
 export async function GET(
   _req: NextRequest,
@@ -106,6 +110,11 @@ export async function PATCH(
 
     const { status, reporterId } = validation.data;
 
+    const existing = await prisma.match.findUnique({
+      where: { id },
+      select: { status: true },
+    });
+
     const data: any = {
       ...(status !== undefined ? { status } : {}),
       ...(reporterId !== undefined
@@ -116,6 +125,13 @@ export async function PATCH(
     };
 
     const match = await prisma.match.update({ where: { id }, data });
+
+    if (existing && existing.status !== match.status) {
+      if (existing.status === "COMPLETED" || match.status === "COMPLETED") {
+        await updateLeagueTableForMatch(match.id);
+      }
+    }
+
     return NextResponse.json(match);
   } catch (e: any) {
     return handleError(e, "Failed to update match", {
@@ -135,7 +151,36 @@ export async function DELETE(
       return NextResponse.json({ error: "Invalid id" }, { status: 400 });
     }
 
+    const match = await prisma.match.findUnique({
+      where: { id },
+      select: {
+        status: true,
+        fixture: {
+          select: {
+            seasonId: true,
+            homeTeamId: true,
+            awayTeamId: true,
+            season: {
+              select: {
+                leagueId: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
     await prisma.match.delete({ where: { id } });
+
+    if (match && match.status === "COMPLETED" && match.fixture) {
+      await updateLeagueTableForFixtureTeams(
+        match.fixture.seasonId,
+        match.fixture.season.leagueId,
+        match.fixture.homeTeamId,
+        match.fixture.awayTeamId,
+      );
+    }
+
     return NextResponse.json({ success: true });
   } catch (e: any) {
     return handleError(e, "Failed to delete match", {

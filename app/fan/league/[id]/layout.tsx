@@ -7,9 +7,14 @@ import { notFound } from "next/navigation";
 interface LayoutProps {
   children: React.ReactNode;
   params: Promise<{ id: string }>;
+  searchParams?: Promise<{ seasonId?: string }>;
 }
 
-const LeagueLayout = async ({ children, params }: LayoutProps) => {
+const LeagueLayout = async ({
+  children,
+  params,
+  searchParams,
+}: LayoutProps) => {
   const { id } = await params;
 
   const leagueId = Number(id);
@@ -33,14 +38,17 @@ const LeagueLayout = async ({ children, params }: LayoutProps) => {
     notFound();
   }
 
+  const sp = (await searchParams) ?? {};
+  const seasonIdQuery = sp.seasonId ? `?seasonId=${sp.seasonId}` : "";
+
   const base = `/fan/league/${league.id}`;
   const status = [
-    { name: "Overview", href: base },
-    { name: "Table", href: `${base}/table` },
-    { name: "Matches", href: `${base}/matches` },
-    { name: "Stats", href: `${base}/stats` },
-    { name: "Transfers", href: `${base}/transfers` },
-    { name: "News", href: `${base}/news` },
+    { name: "Overview", href: `${base}${seasonIdQuery}` },
+    { name: "Table", href: `${base}/table${seasonIdQuery}` },
+    { name: "Matches", href: `${base}/matches${seasonIdQuery}` },
+    { name: "Stats", href: `${base}/stats${seasonIdQuery}` },
+    { name: "Transfers", href: `${base}/transfers${seasonIdQuery}` },
+    { name: "News", href: `${base}/news${seasonIdQuery}` },
   ];
   return (
     <Container>

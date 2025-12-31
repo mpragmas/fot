@@ -149,7 +149,7 @@ const page = async ({ params, searchParams }: GoalsStatsPageProps) => {
         </div>
         {data.map((row, idx) => (
           <div
-            key={row.playerId}
+            key={`${row.playerId}-${idx}`}
             className="dark:border-dark-2 flex items-center justify-between border-b pb-3"
           >
             <div className="flex items-center gap-5">

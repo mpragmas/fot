@@ -55,6 +55,32 @@ function fullName(p: PlayerLite) {
   return p.lastName ? `${p.firstName} ${p.lastName}` : p.firstName;
 }
 
+function computeScore(
+  stats: MatchStatLite[],
+  homePlayerIds: Set<number>,
+  awayPlayerIds: Set<number>,
+) {
+  let home = 0;
+  let away = 0;
+
+  for (const s of stats) {
+    const isHomePlayer = homePlayerIds.has(s.playerId);
+    const isAwayPlayer = awayPlayerIds.has(s.playerId);
+    if (!isHomePlayer && !isAwayPlayer) continue;
+
+    if (s.type === "GOAL") {
+      if (isHomePlayer) home += 1;
+      else away += 1;
+    }
+    if (s.type === "OWN_GOAL") {
+      if (isHomePlayer) away += 1;
+      else home += 1;
+    }
+  }
+
+  return { home, away };
+}
+
 export default function MatchControlPage() {
   const params = useParams();
   const matchId = Number(params.matchId);
@@ -125,11 +151,8 @@ export default function MatchControlPage() {
   );
 
   const score = useMemo(
-    () => ({
-      home: match?.homeScore ?? 0,
-      away: match?.awayScore ?? 0,
-    }),
-    [match?.homeScore, match?.awayScore],
+    () => computeScore(stats, homePlayerIds, awayPlayerIds),
+    [stats, homePlayerIds, awayPlayerIds],
   );
 
   const events: RecordedEvent[] = useMemo(() => {

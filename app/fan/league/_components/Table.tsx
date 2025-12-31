@@ -1,84 +1,60 @@
 import Badge from "@/app/ui/Badge";
 import React from "react";
 
-const teams = [
-  {
-    rank: 1,
-    name: "Rayon sport",
-    pl: 10,
-    w: 8,
-    d: 1,
-    l: 1,
-    goals: "18-3",
-    gd: "+15",
-    pts: 25,
-    form: ["W", "W", "W", "W", "W"],
-  },
-  {
-    rank: 2,
-    name: "Police FC",
-    pl: 9,
-    w: 5,
-    d: 3,
-    l: 1,
-    goals: "16-11",
-    gd: "+5",
-    pts: 18,
-    form: ["D", "D", "W", "D", "W"],
-  },
-  {
-    rank: 3,
-    name: "Mukura VS",
-    pl: 10,
-    w: 6,
-    d: 0,
-    l: 4,
-    goals: "18-18",
-    gd: "+0",
-    pts: 18,
-    form: ["L", "L", "L", "W", "D"],
-  },
-  {
-    rank: 4,
-    name: "APR FC",
-    pl: 10,
-    w: 5,
-    d: 2,
-    l: 3,
-    goals: "17-8",
-    gd: "+9",
-    pts: 17,
-    form: ["D", "W", "W", "L", "W"],
-  },
-  {
-    rank: 5,
-    name: "Gasogi United",
-    pl: 10,
-    w: 5,
-    d: 2,
-    l: 3,
-    goals: "18-11",
-    gd: "+7",
-    pts: 17,
-    form: ["L", "W", "W", "L", "W"],
-  },
-];
+export type LeagueTableDisplayRow = {
+  rank: number;
+  name: string;
+  pl: number;
+  w: number;
+  d: number;
+  l: number;
+  goalsFor: number;
+  goalsAgainst: number;
+  gd: number;
+  pts: number;
+  form?: string[];
+  nextOpponent?: string | null;
+};
 
-const Table = () => {
+type Props = {
+  rows?: LeagueTableDisplayRow[];
+  scope: "overall" | "home" | "away";
+  onScopeChange?: (scope: "overall" | "home" | "away") => void;
+};
+
+const Table: React.FC<Props> = ({ rows = [], scope, onScopeChange }) => {
   return (
     <div className="dark:bg-dark-1 dark:text-whitish mt-3 rounded-2xl p-5">
       <div className="mb-5 flex items-center gap-2">
-        <button className="bg-whitish text-dark dark:bg-whitish dark:text-dark rounded-full px-4 py-1 text-sm font-medium">
+        <button
+          className={`rounded-full px-4 py-1 text-sm font-medium ${
+            scope === "overall"
+              ? "bg-whitish text-dark dark:bg-whitish dark:text-dark"
+              : "dark:bg-dark-4 dark:text-whitish"
+          }`}
+          onClick={() => onScopeChange?.("overall")}
+        >
           All
         </button>
-        <button className="dark:bg-dark-4 dark:text-whitish rounded-full px-4 py-1 text-sm font-medium">
+        <button
+          className={`rounded-full px-4 py-1 text-sm font-medium ${
+            scope === "home"
+              ? "bg-whitish text-dark"
+              : "dark:bg-dark-4 dark:text-whitish"
+          }`}
+          onClick={() => onScopeChange?.("home")}
+        >
           Home
         </button>
-        <button className="dark:bg-dark-4 dark:text-whitish rounded-full px-4 py-1 text-sm font-medium">
+        <button
+          className={`rounded-full px-4 py-1 text-sm font-medium ${
+            scope === "away"
+              ? "bg-whitish text-dark"
+              : "dark:bg-dark-4 dark:text-whitish"
+          }`}
+          onClick={() => onScopeChange?.("away")}
+        >
           Away
-        </button>
-        <button className="dark:bg-dark-4 dark:text-whitish rounded-full px-4 py-1 text-sm font-medium">
-          Form
         </button>
       </div>
 
@@ -99,7 +75,7 @@ const Table = () => {
       </div>
 
       <div className="divide-dark-4/60 dark:divide-dark-4/60 divide-y">
-        {teams.map((t) => (
+        {rows.map((t) => (
           <div
             key={t.rank}
             className="group relative flex items-center gap-4 px-2 py-3"
@@ -114,18 +90,20 @@ const Table = () => {
             <div className="w-8 text-center text-sm">{t.w}</div>
             <div className="w-8 text-center text-sm">{t.d}</div>
             <div className="w-8 text-center text-sm">{t.l}</div>
-            <div className="w-12 text-center text-sm">{t.goals}</div>
-            <div className="w-10 text-center text-sm">{t.gd}</div>
+            <div className="w-12 text-center text-sm">{`${t.goalsFor}-${t.goalsAgainst}`}</div>
+            <div className="w-10 text-center text-sm">
+              {t.gd > 0 ? `+${t.gd}` : t.gd}
+            </div>
             <div className="w-10 text-center text-sm font-bold">{t.pts}</div>
             <div className="w-28 text-left">
               <div className="flex items-center justify-start gap-1">
-                {t.form.map((f, i) => (
+                {t.form?.map((f, i) => (
                   <Badge key={i} v={f} />
                 ))}
               </div>
             </div>
-            <div className="w-10 text-center">
-              <span className="bg-dark-4 inline-block h-6 w-6 rounded-full" />
+            <div className="w-10 text-center text-xs">
+              {t.nextOpponent ?? "-"}
             </div>
           </div>
         ))}
