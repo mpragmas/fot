@@ -2,7 +2,7 @@ import LeftArrow from "@/app/ui/LeftArrow";
 import RightArrow from "@/app/ui/RightArrow";
 import React from "react";
 
-interface Fixture {
+export interface TeamFixtureCard {
   date: string;
   competition: string;
   home: boolean;
@@ -13,7 +13,7 @@ interface Fixture {
   time: string;
 }
 
-const fixtures: Fixture[] = [
+const FALLBACK_FIXTURES: TeamFixtureCard[] = [
   {
     date: "Today",
     competition: "Champions League",
@@ -66,7 +66,12 @@ const fixtures: Fixture[] = [
   },
 ];
 
-const TeamFixtures: React.FC = () => {
+type Props = {
+  fixtures?: TeamFixtureCard[];
+};
+
+const TeamFixtures: React.FC<Props> = ({ fixtures }) => {
+  const data = fixtures && fixtures.length > 0 ? fixtures : FALLBACK_FIXTURES;
   return (
     <div className="flex flex-col items-center justify-center space-y-4 bg-black p-4 font-sans text-white">
       {/* Fixtures Section */}
@@ -78,7 +83,7 @@ const TeamFixtures: React.FC = () => {
         </div>
 
         <div className="space-y-3">
-          {fixtures.map((match, index) => (
+          {data.map((match, index) => (
             <div
               key={index}
               className="border-b border-gray-800 pb-2 last:border-none"

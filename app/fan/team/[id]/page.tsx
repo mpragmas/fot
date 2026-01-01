@@ -1,87 +1,162 @@
 import TopStats from "@/app/components/TopStats";
 import React from "react";
 import NewsSection from "@/app/components/NewsSection";
-
-import MatchInfo from "../_components/TeamForm";
-import NextMatch from "../_components/NextMatch";
 import TeamForm from "../_components/TeamForm";
+import NextMatch from "../_components/NextMatch";
 import TeamFixtures from "../_components/TeamFixtures";
-import Table from "../../league/_components/Table";
+import TableClient from "../../league/[id]/table/TableClient";
+import prisma from "@/app/lib/prisma";
+import {
+  getLeagueMatchCards,
+  getLeagueNews,
+  resolveSeasonForLeague,
+} from "../../league/_lib/leagueData";
+import { getTeamFixturesForSeason, getTeamTopStats } from "../_lib/teamData";
+import { notFound } from "next/navigation";
 
-const newsItems = [
-  {
-    title:
-      "ANOTHER CLEAN SHEET & ANOTHER SET PIECE GOAL | EXTENDED HIGHLIGHTS | Burnley vs Arsenal | PL",
-    source: "YouTube",
-    time: "8 hours ago",
-    image: "https://i.ytimg.com/vi/someimg1.jpg",
-  },
-  {
-    title:
-      "We Take A Point 🤝 | Nottingham Forest 2-2 Man Utd | Extended Highlights",
-    source: "YouTube",
-    time: "8 hours ago",
-    image: "https://i.ytimg.com/vi/someimg2.jpg",
-  },
-  {
-    title: "Defeat in the capital | Fulham 3-0 Wolves | Extended Highlights",
-    source: "YouTube",
-    time: "8 hours ago",
-    image: "https://i.ytimg.com/vi/someimg3.jpg",
-  },
-  {
-    title:
-      "'He leads by example' – Le Bris hails Xhaka for huge impact on Sunderland",
-    source: "FotMob",
-    time: "9 hours ago",
-    image: "https://i.ytimg.com/vi/someimg4.jpg",
-  },
-  {
-    title:
-      "Antoine Semenyo Responds Directly to Premier League Transfer Speculation",
-    source: "SI",
-    time: "9 hours ago",
-    image: "https://i.ytimg.com/vi/someimg5.jpg",
-  },
-  {
-    title: "West Ham 3-1 Newcastle United | Premier League Highlights",
-    source: "YouTube",
-    time: "10 hours ago",
-    image: "https://i.ytimg.com/vi/someimg6.jpg",
-  },
-  {
-    title:
-      "HIGHLIGHTS! Man City 3-1 Bournemouth | City move second with entertaining Bournemouth win!",
-    source: "YouTube",
-    time: "10 hours ago",
-    image: "https://i.ytimg.com/vi/someimg7.jpg",
-  },
-  {
-    title: "Forget Alexander Isak, Newcastle Have Moved on With Nick Woltemade",
-    source: "SI",
-    time: "10 hours ago",
-    image: "https://i.ytimg.com/vi/someimg8.jpg",
-  },
-];
+type TeamPageProps = {
+  params: Promise<{ id: string }>;
+};
 
-const Team = () => {
+const Team = async ({ params }: TeamPageProps) => {
+  const { id } = await params;
+  const teamId = Number(id);
+  if (!Number.isFinite(teamId)) {
+    notFound();
+  }
+
+  const team = await prisma.team.findUnique({
+    where: { id: teamId },
+    include: { league: true },
+  });
+
+  if (!team || !team.leagueId) {
+    notFound();
+  }
+
+  const leagueId = team.leagueId;
+  const season = await resolveSeasonForLeague(leagueId, undefined);
+  if (!season) {
+    notFound();
+  }
+
+  const [matches, newsItems, teamFixtures, seasonTopStats] = await Promise.all([
+    getLeagueMatchCards(season.id, 5),
+    getLeagueNews(8),
+    getTeamFixturesForSeason(teamId, season.id),
+    getTeamTopStats(season.id, teamId),
+  ]);
+
+  // Build team form (last 5 completed matches for this team).
+  const completed = teamFixtures
+    .filter((f) => f.status === "COMPLETED")
+    .filter((f) => f.homeScore != null && f.awayScore != null)
+    .sort((a, b) => b.date.getTime() - a.date.getTime())
+    .slice(0, 5);
+
+  const formItems = completed.map((f) => {
+    const isHome = f.homeTeamId === teamId;
+    const gf = isHome ? f.homeScore! : f.awayScore!;
+    const ga = isHome ? f.awayScore! : f.homeScore!;
+
+    const resultColor =
+      gf > ga ? "bg-green-2" : gf === ga ? "bg-dark-5" : "bg-red-500";
+    const opponentName = isHome ? f.awayTeamName : f.homeTeamName;
+
+    return {
+      score: `${gf}-${ga}`,
+      color: resultColor,
+      img: "/images/logo.png",
+      alt: opponentName,
+    };
+  });
+
+  // Next match: nearest upcoming fixture.
+  const now = new Date();
+  const upcoming = teamFixtures
+    .filter((f) => f.status === "UPCOMING" && f.date > now)
+    .sort((a, b) => a.date.getTime() - b.date.getTime())[0];
+
+  const nextMatchData = upcoming
+    ? {
+        competition: team.league?.name ?? "",
+        emoji: "⚽",
+        time: upcoming.date.toLocaleTimeString(undefined, {
+          hour: "numeric",
+          minute: "2-digit",
+        }),
+        day: upcoming.date.toLocaleDateString(undefined, {
+          month: "short",
+          day: "numeric",
+        }),
+        teams: [
+          {
+            name: upcoming.homeTeamName,
+            img: "/images/logo.png",
+            alt: upcoming.homeTeamName,
+          },
+          {
+            name: upcoming.awayTeamName,
+            img: "/images/logo.png",
+            alt: upcoming.awayTeamName,
+          },
+        ] as [
+          { name: string; img: string; alt: string },
+          { name: string; img: string; alt: string },
+        ],
+      }
+    : null;
+
+  // Sidebar fixtures: upcoming fixtures list.
+  const upcomingList = teamFixtures
+    .filter((f) => f.status === "UPCOMING" && f.date > now)
+    .sort((a, b) => a.date.getTime() - b.date.getTime())
+    .slice(0, 5)
+    .map((f) => {
+      const dateLabel = f.date.toLocaleDateString(undefined, {
+        month: "short",
+        day: "numeric",
+      });
+
+      const timeLabel = f.date.toLocaleTimeString(undefined, {
+        hour: "numeric",
+        minute: "2-digit",
+      });
+
+      const isHome = f.homeTeamId === teamId;
+
+      return {
+        date: dateLabel,
+        competition: team.league?.name ?? "",
+        home: isHome,
+        team1: f.homeTeamName,
+        team1Logo: "/images/logo.png",
+        team2: f.awayTeamName,
+        team2Logo: "/images/logo.png",
+        time: timeLabel,
+      };
+    });
+
   return (
     <div className="mt-7 w-full">
       <div className="mt-5 flex">
         <div className="w-[70%]">
           <div className="flex w-full items-center justify-center bg-black font-sans text-white">
             <div className="flex w-full gap-4">
-              <TeamForm />
-              <NextMatch />
+              <TeamForm items={formItems} />
+              <NextMatch match={nextMatchData} />
             </div>
           </div>
 
-          <Table />
-          <TopStats />
+          <TableClient leagueId={leagueId} seasonId={season.id} />
+
+          {seasonTopStats.topScorers.length > 0 && (
+            <TopStats {...seasonTopStats} />
+          )}
           <NewsSection items={newsItems} />
         </div>
         <div className="w-[30%]">
-          <TeamFixtures />
+          <TeamFixtures fixtures={upcomingList} />
         </div>
       </div>
     </div>

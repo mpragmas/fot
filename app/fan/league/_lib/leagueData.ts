@@ -68,6 +68,8 @@ export const resolveSeasonForLeague = cache(
 );
 
 export type LeagueMatchCard = {
+  homeTeamId: number;
+  awayTeamId: number;
   homeTeam: string;
   awayTeam: string;
   homeLogo: string;
@@ -337,6 +339,8 @@ export const getLeagueMatchCards = cache(
           : undefined;
 
       return {
+        homeTeamId: f.homeTeam.id,
+        awayTeamId: f.awayTeam.id,
         homeTeam: f.homeTeam.name,
         awayTeam: f.awayTeam.name,
         homeLogo: DEFAULT_LOGO,

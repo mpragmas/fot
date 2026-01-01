@@ -1,6 +1,24 @@
 import React from "react";
 
-const nextMatch = {
+type NextMatchTeam = {
+  name: string;
+  img: string;
+  alt: string;
+};
+
+type NextMatchData = {
+  competition: string;
+  emoji: string;
+  time: string;
+  day: string;
+  teams: [NextMatchTeam, NextMatchTeam];
+};
+
+type Props = {
+  match?: NextMatchData | null;
+};
+
+const FALLBACK_NEXT_MATCH: NextMatchData = {
   competition: "Champions League",
   emoji: "⚽",
   time: "10:00 PM",
@@ -19,7 +37,8 @@ const nextMatch = {
   ],
 };
 
-const NextMatch = () => {
+const NextMatch: React.FC<Props> = ({ match }) => {
+  const nextMatch = match ?? FALLBACK_NEXT_MATCH;
   return (
     <div className="flex w-[50%] flex-col justify-between rounded-xl bg-[#121212] p-5 font-bold shadow-lg">
       <div className="mb-3 flex items-center justify-between text-sm text-gray-300">

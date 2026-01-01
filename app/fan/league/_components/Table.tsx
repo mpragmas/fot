@@ -1,7 +1,9 @@
 import Badge from "@/app/ui/Badge";
 import React from "react";
+import Link from "next/link";
 
 export type LeagueTableDisplayRow = {
+  teamId: number;
   rank: number;
   name: string;
   pl: number;
@@ -84,7 +86,12 @@ const Table: React.FC<Props> = ({ rows = [], scope, onScopeChange }) => {
             <div className="text-dark-3 w-6 text-sm">{t.rank}</div>
             <div className="flex flex-1 items-center gap-3">
               <span className="bg-dark-4 inline-block h-6 w-6 rounded-full" />
-              <span className="text-sm font-semibold">{t.name}</span>
+              <Link
+                href={`/fan/team/${t.teamId}`}
+                className="text-sm font-semibold hover:underline"
+              >
+                {t.name}
+              </Link>
             </div>
             <div className="w-8 text-center text-sm">{t.pl}</div>
             <div className="w-8 text-center text-sm">{t.w}</div>

@@ -67,6 +67,7 @@ const TableClient: React.FC<Props> = ({ leagueId, seasonId, initialScope }) => {
     const useScoped = scope !== "overall";
 
     return {
+      teamId: row.teamId,
       rank: index + 1,
       name: row.teamName,
       pl: row.played,

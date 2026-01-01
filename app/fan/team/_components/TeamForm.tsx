@@ -1,39 +1,52 @@
 import React from "react";
 import Image from "next/image";
 
-const TeamForm: React.FC = () => {
-  const teamForm = [
-    {
-      score: "1-1",
-      color: "bg-dark-5",
-      img: "https://upload.wikimedia.org/wikipedia/en/5/53/Arsenal_FC.svg",
-      alt: "Inter",
-    },
-    {
-      score: "1-0",
-      color: "bg-green-2",
-      img: "https://upload.wikimedia.org/wikipedia/en/5/53/Arsenal_FC.svg",
-      alt: "Osasuna",
-    },
-    {
-      score: "4-0",
-      color: "bg-red-500",
-      img: "https://upload.wikimedia.org/wikipedia/en/5/53/Arsenal_FC.svg",
-      alt: "Arsenal",
-    },
-    {
-      score: "0-2",
-      color: "bg-green-2",
-      img: "https://upload.wikimedia.org/wikipedia/en/5/53/Arsenal_FC.svg",
-      alt: "Betis",
-    },
-    {
-      score: "3-0",
-      color: "bg-green-2",
-      img: "https://upload.wikimedia.org/wikipedia/en/5/53/Arsenal_FC.svg",
-      alt: "Sevilla",
-    },
-  ];
+type TeamFormItem = {
+  score: string;
+  color: string;
+  img: string;
+  alt: string;
+};
+
+type Props = {
+  items?: TeamFormItem[];
+};
+
+const DEFAULT_ITEMS: TeamFormItem[] = [
+  {
+    score: "1-1",
+    color: "bg-dark-5",
+    img: "https://upload.wikimedia.org/wikipedia/en/5/53/Arsenal_FC.svg",
+    alt: "Inter",
+  },
+  {
+    score: "1-0",
+    color: "bg-green-2",
+    img: "https://upload.wikimedia.org/wikipedia/en/5/53/Arsenal_FC.svg",
+    alt: "Osasuna",
+  },
+  {
+    score: "4-0",
+    color: "bg-red-500",
+    img: "https://upload.wikimedia.org/wikipedia/en/5/53/Arsenal_FC.svg",
+    alt: "Arsenal",
+  },
+  {
+    score: "0-2",
+    color: "bg-green-2",
+    img: "https://upload.wikimedia.org/wikipedia/en/5/53/Arsenal_FC.svg",
+    alt: "Betis",
+  },
+  {
+    score: "3-0",
+    color: "bg-green-2",
+    img: "https://upload.wikimedia.org/wikipedia/en/5/53/Arsenal_FC.svg",
+    alt: "Sevilla",
+  },
+];
+
+const TeamForm: React.FC<Props> = ({ items }) => {
+  const teamForm = items && items.length > 0 ? items : DEFAULT_ITEMS;
 
   return (
     <div className="w-[50%] rounded-xl bg-[#121212] p-5 shadow-lg">
