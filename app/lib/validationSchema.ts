@@ -83,7 +83,12 @@ export const patchFixtureSchema = z.object({
   roundNumber: z.number().int().min(1).optional(),
 });
 
-export const matchStatusEnum = z.enum(["UPCOMING", "LIVE", "COMPLETED"]);
+export const matchStatusEnum = z.enum([
+  "UPCOMING",
+  "LIVE",
+  "COMPLETED",
+  "POSTPONED",
+]);
 
 export const matchSchema = z.object({
   fixtureId: z.number().min(1, "Fixture is required"),
@@ -100,6 +105,7 @@ export const statTypeEnum = z.enum([
   "GOAL",
   "ASSIST",
   "OWN_GOAL",
+  "PENALTY_GOAL",
   "YELLOW_CARD",
   "RED_CARD",
   "SHOT",

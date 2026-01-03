@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "StatType" ADD VALUE 'PENALTY_GOAL';

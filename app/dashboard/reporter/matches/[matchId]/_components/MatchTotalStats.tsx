@@ -52,6 +52,22 @@ const MatchTotalStats: React.FC<MatchTotalStatsProps> = ({
           label={`Corners ${awayTeamName}`}
           value={counters.awayCorners}
         />
+        <StatCard
+          label={`Yellow cards ${homeTeamName}`}
+          value={counters.homeYellowCards}
+        />
+        <StatCard
+          label={`Yellow cards ${awayTeamName}`}
+          value={counters.awayYellowCards}
+        />
+        <StatCard
+          label={`Red cards ${homeTeamName}`}
+          value={counters.homeRedCards}
+        />
+        <StatCard
+          label={`Red cards ${awayTeamName}`}
+          value={counters.awayRedCards}
+        />
       </div>
     </div>
   );

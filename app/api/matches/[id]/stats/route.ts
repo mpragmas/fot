@@ -27,7 +27,7 @@ async function recomputeMatchScore(matchId: number) {
   const stats = await prisma.matchStat.findMany({
     where: {
       matchId,
-      type: { in: ["GOAL", "OWN_GOAL"] },
+      type: { in: ["GOAL", "OWN_GOAL", "PENALTY_GOAL"] },
     },
     select: {
       type: true,
@@ -49,7 +49,7 @@ async function recomputeMatchScore(matchId: number) {
     const isAway = teamId === awayTeamId;
     if (!isHome && !isAway) continue;
 
-    if (s.type === "GOAL") {
+    if (s.type === "GOAL" || s.type === "PENALTY_GOAL") {
       if (isHome) home += 1;
       else away += 1;
     } else {
@@ -117,6 +117,17 @@ export async function POST(
     const { playerId, type, minute } = parsed.data;
 
     if (type !== "YELLOW_CARD") {
+      // For all non-yellow stats, make creation idempotent on
+      // (matchId, playerId, type, minute) so rapid double-clicks or
+      // network retries don't create duplicate rows.
+      const existing = await prisma.matchStat.findFirst({
+        where: { matchId, playerId, type, minute },
+      });
+      if (existing) {
+        emitStat(matchId, existing);
+        return NextResponse.json(existing, { status: 200 });
+      }
+
       const stat = await prisma.matchStat.create({
         data: { matchId, playerId, type, minute },
       });

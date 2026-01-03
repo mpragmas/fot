@@ -11,6 +11,8 @@ import LiveTimelineSection, {
 } from "./_components/LiveTimelineSection";
 import { useMatchClockControls } from "@/app/hooks/useMatchClockControls";
 import { useMatchRoomSocket } from "@/app/hooks/useMatchRoomSocket";
+import Lineup from "@/app/fan/match/[id]/lineup/page";
+import LineupReport from "./_components/LineupReport";
 
 // Fetch a single match by ID (includes phase/clock fields)
 const fetchMatch = async (id: number) => {
@@ -24,6 +26,10 @@ type Counters = {
   awayShotsOnTarget: number;
   homeCorners: number;
   awayCorners: number;
+  homeYellowCards: number;
+  awayYellowCards: number;
+  homeRedCards: number;
+  awayRedCards: number;
 };
 
 type PlayerLite = {
@@ -42,6 +48,7 @@ type MatchStatLite = {
     | "GOAL"
     | "ASSIST"
     | "OWN_GOAL"
+    | "PENALTY_GOAL"
     | "YELLOW_CARD"
     | "RED_CARD"
     | "SHOT"
@@ -68,7 +75,7 @@ function computeScore(
     const isAwayPlayer = awayPlayerIds.has(s.playerId);
     if (!isHomePlayer && !isAwayPlayer) continue;
 
-    if (s.type === "GOAL") {
+    if (s.type === "GOAL" || s.type === "PENALTY_GOAL") {
       if (isHomePlayer) home += 1;
       else away += 1;
     }
@@ -97,8 +104,6 @@ export default function MatchControlPage() {
     queryKey: ["match", matchId],
     queryFn: () => fetchMatch(matchId),
     enabled: !!matchId,
-    // Fast-ish polling to keep clock & stats fresh as a fallback to sockets
-    refetchInterval: 3000,
   });
 
   useMatchRoomSocket(matchId);
@@ -110,6 +115,9 @@ export default function MatchControlPage() {
     startSecondHalf: rawControls.startSecondHalf,
     endMatch: rawControls.endMatch,
     addExtraTime: rawControls.addExtraTime,
+    pauseClock: rawControls.pauseClock,
+    resumeClock: rawControls.resumeClock,
+    undoLastAction: rawControls.undoLastAction,
     isLoading: rawControls.isLoading,
   };
 
@@ -118,6 +126,10 @@ export default function MatchControlPage() {
     awayShotsOnTarget: match?.counters?.awayShotsOnTarget ?? 0,
     homeCorners: match?.counters?.homeCorners ?? 0,
     awayCorners: match?.counters?.awayCorners ?? 0,
+    homeYellowCards: 0,
+    awayYellowCards: 0,
+    homeRedCards: 0,
+    awayRedCards: 0,
   };
 
   const homePlayers: PlayerLite[] = useMemo(
@@ -155,31 +167,225 @@ export default function MatchControlPage() {
     [stats, homePlayerIds, awayPlayerIds],
   );
 
+  const currentMinute = useMemo(() => {
+    const elapsed = match?.elapsedSeconds ?? 0;
+    const phase = match?.phase ?? "PRE";
+    // Derive a simple minute value that roughly tracks the clock:
+    // - In first half, clamp to 0-45 and show extra as 45+ for display only.
+    // - In second half / ET, offset from 45.
+    const baseMinutes = Math.floor(elapsed / 60);
+    if (phase === "FIRST_HALF") return baseMinutes;
+    if (phase === "SECOND_HALF" || phase === "ET") return 45 + baseMinutes;
+    return baseMinutes;
+  }, [match?.elapsedSeconds, match?.phase]);
+
+  const cardCounters = useMemo(() => {
+    let homeYellow = 0;
+    let awayYellow = 0;
+    let homeRed = 0;
+    let awayRed = 0;
+
+    for (const s of stats) {
+      if (s.type !== "YELLOW_CARD" && s.type !== "RED_CARD") continue;
+      const isHome = homePlayerIds.has(s.playerId);
+      const isAway = awayPlayerIds.has(s.playerId);
+      if (!isHome && !isAway) continue;
+
+      if (s.type === "YELLOW_CARD") {
+        if (isHome) homeYellow += 1;
+        else awayYellow += 1;
+      } else {
+        if (isHome) homeRed += 1;
+        else awayRed += 1;
+      }
+    }
+
+    return {
+      homeYellowCards: homeYellow,
+      awayYellowCards: awayYellow,
+      homeRedCards: homeRed,
+      awayRedCards: awayRed,
+    };
+  }, [homePlayerIds, awayPlayerIds, stats]);
+
   const events: RecordedEvent[] = useMemo(() => {
-    return stats
-      .filter((s) =>
-        [
-          "GOAL",
-          "OWN_GOAL",
-          "ASSIST",
-          "YELLOW_CARD",
-          "RED_CARD",
-          "SUBSTITUTION",
-        ].includes(s.type),
-      )
-      .map((s) => {
-        const p = playersById.get(s.playerId);
-        const isHome = homePlayerIds.has(s.playerId);
-        const team = isHome ? "HOME" : "AWAY";
-        return {
-          id: s.id,
-          type: s.type as RecordedEvent["type"],
-          minute: s.minute,
+    if (!stats || stats.length === 0) return [];
+
+    const goalLike: MatchStatLite[] = [];
+    const assists: MatchStatLite[] = [];
+    const yellows: MatchStatLite[] = [];
+    const reds: MatchStatLite[] = [];
+    const substitutions: MatchStatLite[] = [];
+
+    for (const s of stats) {
+      if (
+        s.type === "GOAL" ||
+        s.type === "OWN_GOAL" ||
+        s.type === "PENALTY_GOAL"
+      ) {
+        goalLike.push(s);
+      } else if (s.type === "ASSIST") {
+        assists.push(s);
+      } else if (s.type === "YELLOW_CARD") {
+        yellows.push(s);
+      } else if (s.type === "RED_CARD") {
+        reds.push(s);
+      } else if (s.type === "SUBSTITUTION") {
+        substitutions.push(s);
+      }
+    }
+
+    // Build a fast lookup for assists by (team, minute)
+    const assistsByTeamMinute = new Map<string, MatchStatLite[]>();
+    const keyFor = (team: "HOME" | "AWAY", minute: number) =>
+      `${team}:${minute}`;
+
+    for (const a of assists) {
+      const isHome = homePlayerIds.has(a.playerId);
+      const team = isHome ? "HOME" : "AWAY";
+      const key = keyFor(team, a.minute);
+      const list = assistsByTeamMinute.get(key);
+      if (list) list.push(a);
+      else assistsByTeamMinute.set(key, [a]);
+    }
+
+    const result: RecordedEvent[] = [];
+
+    // Goals / own-goals / penalties, optionally enriched with assist info
+    for (const g of goalLike) {
+      const isHome = homePlayerIds.has(g.playerId);
+      // For normal/penalty goals, event appears for the scoring team.
+      // For own goals, event should appear for the OPPOSITE team (the
+      // team that benefits from the own goal).
+      const team: "HOME" | "AWAY" =
+        g.type === "OWN_GOAL"
+          ? isHome
+            ? "AWAY"
+            : "HOME"
+          : isHome
+            ? "HOME"
+            : "AWAY";
+      const p = playersById.get(g.playerId);
+      const key = keyFor(team, g.minute);
+      const possibleAssists = assistsByTeamMinute.get(key) ?? [];
+      const assist = possibleAssists.find((a) => a.playerId !== g.playerId);
+      const assistPlayer = assist
+        ? playersById.get(assist.playerId)
+        : undefined;
+
+      const base: RecordedEvent = {
+        id: g.id,
+        type: g.type as RecordedEvent["type"],
+        minute: g.minute,
+        team,
+        playerId: g.playerId,
+        playerName: p ? fullName(p) : undefined,
+      };
+
+      if (assist && assistPlayer) {
+        // Attach assist name into playerName subtitle via LiveTimelineSection
+        base.playerName = `${base.playerName ?? "Unknown"} (assist: ${fullName(
+          assistPlayer,
+        )})`;
+      }
+
+      result.push(base);
+    }
+
+    // Cards: group second yellow + red at same minute into one event
+    const yellowByPlayerMinute = new Map<string, MatchStatLite>();
+    for (const y of yellows) {
+      const key = `${y.playerId}:${y.minute}`;
+      yellowByPlayerMinute.set(key, y);
+    }
+
+    const consumedYellowKeys = new Set<string>();
+
+    for (const r of reds) {
+      const key = `${r.playerId}:${r.minute}`;
+      const pairedYellow = yellowByPlayerMinute.get(key);
+      const isHome = homePlayerIds.has(r.playerId);
+      const team = isHome ? "HOME" : "AWAY";
+      const p = playersById.get(r.playerId);
+
+      if (pairedYellow) {
+        consumedYellowKeys.add(key);
+        result.push({
+          id: r.id,
+          type: "RED_CARD",
+          minute: r.minute,
           team,
-          playerId: s.playerId,
+          playerId: r.playerId,
+          playerName: p
+            ? `${fullName(p)} (second yellow → red)`
+            : "Unknown (second yellow → red)",
+        });
+      } else {
+        result.push({
+          id: r.id,
+          type: "RED_CARD",
+          minute: r.minute,
+          team,
+          playerId: r.playerId,
           playerName: p ? fullName(p) : undefined,
-        };
+        });
+      }
+    }
+
+    for (const y of yellows) {
+      const key = `${y.playerId}:${y.minute}`;
+      if (consumedYellowKeys.has(key)) continue;
+      const isHome = homePlayerIds.has(y.playerId);
+      const team = isHome ? "HOME" : "AWAY";
+      const p = playersById.get(y.playerId);
+      result.push({
+        id: y.id,
+        type: "YELLOW_CARD",
+        minute: y.minute,
+        team,
+        playerId: y.playerId,
+        playerName: p ? fullName(p) : undefined,
       });
+    }
+
+    // Substitutions: group off + on in the same minute and team
+    const subsByTeamMinute = new Map<string, MatchStatLite[]>();
+    for (const s of substitutions) {
+      const isHome = homePlayerIds.has(s.playerId);
+      const team = isHome ? "HOME" : "AWAY";
+      const key = keyFor(team, s.minute);
+      const list = subsByTeamMinute.get(key);
+      if (list) list.push(s);
+      else subsByTeamMinute.set(key, [s]);
+    }
+
+    for (const [key, list] of subsByTeamMinute.entries()) {
+      if (list.length === 0) continue;
+      const [teamLabel, minuteStr] = key.split(":");
+      const minute = Number(minuteStr);
+      const team = teamLabel === "HOME" ? "HOME" : "AWAY";
+
+      const p1 = playersById.get(list[0].playerId);
+      const p2 = list[1] ? playersById.get(list[1].playerId) : undefined;
+
+      const label =
+        p1 && p2
+          ? `${fullName(p1)} → ${fullName(p2)}`
+          : p1
+            ? fullName(p1)
+            : "Substitution";
+
+      result.push({
+        id: list[0].id,
+        type: "SUBSTITUTION",
+        minute,
+        team,
+        playerId: list[0].playerId,
+        playerName: label,
+      });
+    }
+
+    return result;
   }, [homePlayerIds, playersById, stats]);
 
   const createStatMutation = useMutation({
@@ -196,39 +402,11 @@ export default function MatchControlPage() {
       if (!res.ok) throw new Error("Failed to create stat");
       return res.json();
     },
-    onMutate: async (payload) => {
-      await queryClient.cancelQueries({ queryKey: ["match", matchId] });
-      const previous = queryClient.getQueryData<any>(["match", matchId]);
-      queryClient.setQueryData<any>(["match", matchId], (old: any) => {
-        if (!old) return old;
-        const prev: any[] = Array.isArray(old.stats) ? old.stats : [];
-        const optimistic = {
-          id: -Date.now(),
-          matchId,
-          playerId: payload.playerId,
-          type: payload.type,
-          minute: payload.minute,
-          createdAt: new Date().toISOString(),
-        };
-        return { ...old, stats: [...prev, optimistic] };
-      });
-      return { previous };
-    },
-    onError: (_err, _payload, ctx) => {
-      if (ctx?.previous)
-        queryClient.setQueryData(["match", matchId], ctx.previous);
-    },
-    onSuccess: (created) => {
-      const createdList: any[] = Array.isArray(created) ? created : [created];
-      queryClient.setQueryData<any>(["match", matchId], (old: any) => {
-        if (!old) return old;
-        const prev: any[] = Array.isArray(old.stats) ? old.stats : [];
-        const withoutOptimistic = prev.filter((s) => s.id >= 0);
-        const merged = [...withoutOptimistic, ...createdList].sort(
-          (a, b) => a.minute - b.minute || a.id - b.id,
-        );
-        return { ...old, stats: merged };
-      });
+    onSuccess: () => {
+      // Always refetch from server after create so we have the authoritative
+      // list of stats (including yellow+red pairs, etc.) and avoid any
+      // duplicated or flickering optimistic entries.
+      queryClient.invalidateQueries({ queryKey: ["match", matchId] });
     },
   });
 
@@ -276,17 +454,9 @@ export default function MatchControlPage() {
       if (ctx?.previous)
         queryClient.setQueryData(["match", matchId], ctx.previous);
     },
-    onSuccess: (updated) => {
-      queryClient.setQueryData<any>(["match", matchId], (old: any) => {
-        if (!old) return old;
-        const prev: any[] = Array.isArray(old.stats) ? old.stats : [];
-        return {
-          ...old,
-          stats: prev
-            .map((s) => (s.id === updated.id ? updated : s))
-            .sort((a, b) => a.minute - b.minute || a.id - b.id),
-        };
-      });
+    onSuccess: () => {
+      // After an edit, refetch from server to keep the list authoritative.
+      queryClient.invalidateQueries({ queryKey: ["match", matchId] });
     },
   });
 
@@ -311,6 +481,11 @@ export default function MatchControlPage() {
     onError: (_err, _statId, ctx) => {
       if (ctx?.previous)
         queryClient.setQueryData(["match", matchId], ctx.previous);
+    },
+    onSuccess: () => {
+      // Ensure we reflect the deletion from the backend, not just the
+      // optimistic cache update.
+      queryClient.invalidateQueries({ queryKey: ["match", matchId] });
     },
   });
 
@@ -443,12 +618,23 @@ export default function MatchControlPage() {
           onAdjustCorners={handleAdjustCorners}
           homeTeamName={match.fixture.homeTeam.name}
           awayTeamName={match.fixture.awayTeam.name}
+          isSubmitting={createStatMutation.isPending}
+          currentMinute={currentMinute}
         />
-        <MatchVenue />
+        <MatchVenue
+          matchId={match.id}
+          fixtureId={match.fixture.id}
+          referee={match.fixture.referee ?? ""}
+          stadium={match.fixture.stadium ?? ""}
+        />
       </div>
+
       <LiveTimelineSection
         events={events}
-        counters={counters}
+        counters={{
+          ...counters,
+          ...cardCounters,
+        }}
         homeTeamName={match.fixture.homeTeam.name}
         awayTeamName={match.fixture.awayTeam.name}
         onDeleteEvent={handleDeleteStat}

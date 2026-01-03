@@ -10,6 +10,8 @@ const VALID_ACTIONS = new Set([
   "START_SECOND_HALF",
   "ADD_EXTRA_TIME",
   "END_MATCH",
+  "PAUSE_CLOCK",
+  "RESUME_CLOCK",
 ] as const);
 
 export type MatchClockAction =
@@ -17,7 +19,9 @@ export type MatchClockAction =
   | "END_FIRST_HALF"
   | "START_SECOND_HALF"
   | "ADD_EXTRA_TIME"
-  | "END_MATCH";
+  | "END_MATCH"
+  | "PAUSE_CLOCK"
+  | "RESUME_CLOCK";
 
 export async function PATCH(
   req: NextRequest,
@@ -100,6 +104,18 @@ export async function PATCH(
         nextPhase = "FT";
         nextElapsed = effectiveElapsed;
         nextClockStartedAt = null;
+        break;
+      }
+      case "PAUSE_CLOCK": {
+        // freeze elapsed at effectiveElapsed, stop clock
+        nextElapsed = effectiveElapsed;
+        nextClockStartedAt = null;
+        break;
+      }
+      case "RESUME_CLOCK": {
+        // resume from stored elapsed; don't change status/phase
+        nextElapsed = baseElapsed;
+        nextClockStartedAt = now;
         break;
       }
     }

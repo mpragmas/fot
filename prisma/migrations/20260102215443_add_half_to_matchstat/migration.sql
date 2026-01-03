@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "MatchStat" ADD COLUMN     "half" INTEGER NOT NULL DEFAULT 1;

@@ -5,7 +5,11 @@ import { useSession } from "next-auth/react";
 import { useMemo } from "react";
 import { useMatchStatusSocket } from "./useMatchStatusSocket";
 
-export type ReporterMatchStatus = "UPCOMING" | "LIVE" | "COMPLETED";
+export type ReporterMatchStatus =
+  | "UPCOMING"
+  | "LIVE"
+  | "COMPLETED"
+  | "POSTPONED";
 
 export type ApiMatch = {
   id: number;

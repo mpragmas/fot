@@ -23,6 +23,9 @@ interface MatchReportHeaderProps {
     startSecondHalf: () => void;
     endMatch: () => void;
     addExtraTime: (minutes: number) => void;
+    pauseClock: () => void;
+    resumeClock: () => void;
+    undoLastAction: () => void;
     isLoading: boolean;
   };
 }
@@ -61,6 +64,9 @@ const MatchReportHeader = ({
     startSecondHalf,
     endMatch,
     addExtraTime,
+    pauseClock,
+    resumeClock,
+    undoLastAction,
     isLoading,
   } = controls;
 
@@ -120,6 +126,10 @@ const MatchReportHeader = ({
     addExtraTime(Math.floor(effectiveElapsedSeconds / 60));
   const handleEndMatch = () => endMatch();
 
+  const handlePauseClock = () => pauseClock();
+  const handleResumeClock = () => resumeClock();
+  const handleUndoLastAction = () => undoLastAction();
+
   return (
     <>
       <div className="border-gray-2 rounded-xl border bg-white p-6">
@@ -176,6 +186,13 @@ const MatchReportHeader = ({
                 End First Half
               </button>
               <button
+                onClick={handlePauseClock}
+                disabled={isLoading}
+                className="bg-gray-2 rounded-md px-4 py-2 shadow disabled:opacity-50"
+              >
+                Pause Clock
+              </button>
+              <button
                 onClick={handleAddExtraTime}
                 disabled={isLoading}
                 className="bg-gray-2 rounded-md px-4 py-2 shadow disabled:opacity-50"
@@ -201,6 +218,13 @@ const MatchReportHeader = ({
                 className="bg-gray-2 rounded-md px-4 py-2 shadow disabled:opacity-50"
               >
                 Start Second Half
+              </button>
+              <button
+                onClick={handleResumeClock}
+                disabled={isLoading}
+                className="bg-gray-2 rounded-md px-4 py-2 shadow disabled:opacity-50"
+              >
+                Resume Clock
               </button>
               <button
                 onClick={handleAddExtraTime}
@@ -237,6 +261,15 @@ const MatchReportHeader = ({
               </button>
             </>
           )}
+
+          {/* Undo last clock action */}
+          <button
+            onClick={handleUndoLastAction}
+            disabled={isLoading}
+            className="border-gray-2 text-gray-2 rounded-md border px-4 py-2 shadow-sm disabled:opacity-50"
+          >
+            Undo Last Action
+          </button>
 
           {phase === "FT" && (
             <div className="px-4 py-2 font-semibold text-gray-500">FT</div>

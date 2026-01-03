@@ -168,7 +168,23 @@ export async function DELETE(
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
-    await prisma.matchStat.delete({ where: { id: statId } });
+    // If this is a red card from a second yellow, also remove the yellow at the
+    // same minute for the same player so the pair stays consistent.
+    if (existing.type === "RED_CARD") {
+      await prisma.$transaction(async (tx) => {
+        await tx.matchStat.delete({ where: { id: statId } });
+        await tx.matchStat.deleteMany({
+          where: {
+            matchId,
+            playerId: existing.playerId,
+            type: "YELLOW_CARD",
+            minute: existing.minute,
+          },
+        });
+      });
+    } else {
+      await prisma.matchStat.delete({ where: { id: statId } });
+    }
 
     emitStatDeleted(matchId, statId);
 

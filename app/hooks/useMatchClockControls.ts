@@ -1,9 +1,14 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useRef } from "react";
 import type { MatchClockAction } from "@/app/api/matches/[id]/clock/route";
 import type { ReporterMatchStatus } from "./userReporterMatchs";
 
 export function useMatchClockControls(matchId: number) {
   const queryClient = useQueryClient();
+
+  // Keep a snapshot of the last match state so we can offer a simple
+  // frontend-only "undo last action" that restores the cached state.
+  const lastMatchSnapshotRef = useRef<any | null>(null);
 
   const mutation = useMutation({
     mutationFn: async (action: MatchClockAction) => {
@@ -14,6 +19,12 @@ export function useMatchClockControls(matchId: number) {
       });
       if (!res.ok) throw new Error("Failed to update match clock");
       return res.json();
+    },
+    onMutate: async (action: MatchClockAction) => {
+      // Snapshot current match before applying the action.
+      const previous = queryClient.getQueryData(["match", matchId]);
+      lastMatchSnapshotRef.current = previous;
+      return { previous, action };
     },
     onSuccess: (updated) => {
       // Update single match cache; socket will also broadcast
@@ -49,6 +60,16 @@ export function useMatchClockControls(matchId: number) {
       mutation.mutate("ADD_EXTRA_TIME");
     },
     endMatch: () => mutation.mutate("END_MATCH"),
+    pauseClock: () => mutation.mutate("PAUSE_CLOCK"),
+    resumeClock: () => mutation.mutate("RESUME_CLOCK"),
+    undoLastAction: () => {
+      if (!lastMatchSnapshotRef.current) return;
+      queryClient.setQueryData(
+        ["match", matchId],
+        lastMatchSnapshotRef.current,
+      );
+      lastMatchSnapshotRef.current = null;
+    },
     isLoading: mutation.isPending,
   };
 }

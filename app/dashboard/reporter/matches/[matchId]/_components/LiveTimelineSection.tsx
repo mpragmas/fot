@@ -7,6 +7,7 @@ import MatchTotalStats from "./MatchTotalStats";
 export type RecordedEventType =
   | "GOAL"
   | "OWN_GOAL"
+  | "PENALTY_GOAL"
   | "ASSIST"
   | "YELLOW_CARD"
   | "RED_CARD"
@@ -132,6 +133,7 @@ const toTimelineProps = (
   const type: TimelineType =
     event.type === "GOAL" ||
     event.type === "OWN_GOAL" ||
+    event.type === "PENALTY_GOAL" ||
     event.type === "ASSIST"
       ? "goal"
       : event.type === "YELLOW_CARD"
@@ -143,15 +145,17 @@ const toTimelineProps = (
   const title =
     event.type === "GOAL"
       ? `Goal by ${event.playerName ?? "Unknown"}`
-      : event.type === "OWN_GOAL"
-        ? `Own goal by ${event.playerName ?? "Unknown"}`
-        : event.type === "ASSIST"
-          ? `Assist by ${event.playerName ?? "Unknown"}`
-          : event.type === "YELLOW_CARD"
-            ? `Yellow card for ${event.playerName ?? "Unknown"}`
-            : event.type === "RED_CARD"
-              ? `Red card for ${event.playerName ?? "Unknown"}`
-              : `Substitution: ${event.playerName ?? "Unknown"}`;
+      : event.type === "PENALTY_GOAL"
+        ? `Penalty goal by ${event.playerName ?? "Unknown"}`
+        : event.type === "OWN_GOAL"
+          ? `Own goal by ${event.playerName ?? "Unknown"}`
+          : event.type === "ASSIST"
+            ? `Assist by ${event.playerName ?? "Unknown"}`
+            : event.type === "YELLOW_CARD"
+              ? `Yellow card for ${event.playerName ?? "Unknown"}`
+              : event.type === "RED_CARD"
+                ? `Red card for ${event.playerName ?? "Unknown"}`
+                : `Substitution: ${event.playerName ?? "Unknown"}`;
 
   const subtitleParts = [`${formatMinute(event.minute)} ${teamName}`].filter(
     Boolean,
@@ -256,8 +260,8 @@ export default function LiveTimelineSection({
           {/* Vertical center line */}
           <div className="bg-gray-2 absolute inset-y-0 left-1/2 w-px -translate-x-1/2" />
 
-          {sortedEvents.map((event, index) => (
-            <div key={`${event.id}-${index}`}>
+          {sortedEvents.map((event) => (
+            <div key={event.id}>
               {editingId === event.id ? (
                 <div className="mb-8 rounded-lg border border-gray-200 p-4">
                   <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
@@ -273,6 +277,7 @@ export default function LiveTimelineSection({
                         }
                       >
                         <option value="GOAL">Goal</option>
+                        <option value="PENALTY_GOAL">Penalty goal</option>
                         <option value="OWN_GOAL">Own goal</option>
                         <option value="ASSIST">Assist</option>
                         <option value="YELLOW_CARD">Yellow card</option>

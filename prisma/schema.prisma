@@ -41,6 +41,7 @@ enum StatType {
   GOAL
   ASSIST
   OWN_GOAL
+  PENALTY_GOAL
   YELLOW_CARD
   RED_CARD
   SHOT

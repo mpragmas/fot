@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import type { RecordedEventTeam } from "./LiveTimelineSection";
 
 type MatchStatType =
   | "GOAL"
   | "OWN_GOAL"
+  | "PENALTY_GOAL"
   | "ASSIST"
   | "YELLOW_CARD"
   | "RED_CARD"
@@ -29,6 +30,8 @@ interface MatchRecordEventsProps {
   onAdjustCorners: (team: RecordedEventTeam, delta: 1 | -1) => void;
   homeTeamName: string;
   awayTeamName: string;
+  isSubmitting: boolean;
+  currentMinute?: number;
 }
 
 const MatchRecordEvents: React.FC<MatchRecordEventsProps> = ({
@@ -40,6 +43,8 @@ const MatchRecordEvents: React.FC<MatchRecordEventsProps> = ({
   onAdjustCorners,
   homeTeamName,
   awayTeamName,
+  isSubmitting,
+  currentMinute,
 }) => {
   const tabs = [
     "Goals",
@@ -55,6 +60,7 @@ const MatchRecordEvents: React.FC<MatchRecordEventsProps> = ({
   const [selectedTeam, setSelectedTeam] = useState<RecordedEventTeam>("HOME");
   const [minute, setMinute] = useState("0");
   const [ownGoal, setOwnGoal] = useState(false);
+  const [penalty, setPenalty] = useState(false);
 
   const [goalPlayerId, setGoalPlayerId] = useState<string>("");
   const [assistPlayerId, setAssistPlayerId] = useState<string>("");
@@ -65,6 +71,15 @@ const MatchRecordEvents: React.FC<MatchRecordEventsProps> = ({
   const [cardColor, setCardColor] = useState<"YELLOW_CARD" | "RED_CARD">(
     "YELLOW_CARD",
   );
+
+  // Whenever the current match minute changes, if the user hasn't typed a
+  // specific value (we treat "0" as default), sync the form minute to it.
+  useEffect(() => {
+    if (currentMinute == null) return;
+    if (minute === "0" || minute === "") {
+      setMinute(String(Math.max(0, Math.floor(currentMinute))));
+    }
+  }, [currentMinute, minute]);
 
   const CounterRow = ({
     label,
@@ -136,6 +151,7 @@ const MatchRecordEvents: React.FC<MatchRecordEventsProps> = ({
       </div>
     );
   };
+
   const parsedMinute = Number.isFinite(Number(minute))
     ? Math.max(0, Math.floor(Number(minute)))
     : 0;
@@ -143,6 +159,7 @@ const MatchRecordEvents: React.FC<MatchRecordEventsProps> = ({
   const resetForm = useCallback(() => {
     setMinute("0");
     setOwnGoal(false);
+    setPenalty(false);
     setCardColor("YELLOW_CARD");
     setGoalPlayerId("");
     setAssistPlayerId("");
@@ -234,9 +251,14 @@ const MatchRecordEvents: React.FC<MatchRecordEventsProps> = ({
                 Assist (optional)
               </label>
               <select
-                className="border-gray-2 w-full rounded-md border p-2 outline-none focus:outline-none"
+                className={`border-gray-2 w-full rounded-md border p-2 outline-none focus:outline-none ${
+                  ownGoal || penalty
+                    ? "cursor-not-allowed bg-gray-100 text-gray-400"
+                    : "bg-white"
+                }`}
                 value={assistPlayerId}
                 onChange={(e) => setAssistPlayerId(e.target.value)}
+                disabled={ownGoal || penalty}
               >
                 <option value="">No assist</option>
                 {teamPlayers.map((p) => (
@@ -256,9 +278,37 @@ const MatchRecordEvents: React.FC<MatchRecordEventsProps> = ({
                 type="checkbox"
                 className="h-4 w-4 outline-none focus:outline-none"
                 checked={ownGoal}
-                onChange={(e) => setOwnGoal(e.target.checked)}
+                onChange={(e) => {
+                  const next = e.target.checked;
+                  setOwnGoal(next);
+                  if (next) {
+                    // Own goal and penalty are mutually exclusive.
+                    setPenalty(false);
+                    // No assist for own goals: clear assist.
+                    setAssistPlayerId("");
+                  }
+                }}
               />
               <span className="text-gray-600">Own goal</span>
+            </label>
+
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                className="h-4 w-4 outline-none focus:outline-none"
+                checked={penalty}
+                onChange={(e) => {
+                  const next = e.target.checked;
+                  setPenalty(next);
+                  if (next) {
+                    // Penalty and own-goal are mutually exclusive.
+                    setOwnGoal(false);
+                    // No assist for penalties: clear assist.
+                    setAssistPlayerId("");
+                  }
+                }}
+              />
+              <span className="text-gray-600">Penalty</span>
             </label>
 
             <button
@@ -266,14 +316,20 @@ const MatchRecordEvents: React.FC<MatchRecordEventsProps> = ({
               onClick={() => {
                 const playerId = Number(goalPlayerId);
                 if (!Number.isFinite(playerId) || playerId < 1) return;
+                const type: MatchStatType = penalty
+                  ? "PENALTY_GOAL"
+                  : ownGoal
+                    ? "OWN_GOAL"
+                    : "GOAL";
                 onCreateStat({
                   playerId,
-                  type: ownGoal ? "OWN_GOAL" : "GOAL",
+                  type,
                   minute: parsedMinute,
                 });
                 const aId = Number(assistPlayerId);
                 if (
                   !ownGoal &&
+                  !penalty &&
                   Number.isFinite(aId) &&
                   aId > 0 &&
                   aId !== playerId
@@ -286,7 +342,8 @@ const MatchRecordEvents: React.FC<MatchRecordEventsProps> = ({
                 }
                 resetForm();
               }}
-              className="bg-blue-2 rounded-md px-4 py-2 text-white outline-none focus:outline-none"
+              disabled={isSubmitting}
+              className="bg-blue-2 rounded-md px-4 py-2 text-white outline-none focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
             >
               Add Goal
             </button>
@@ -346,6 +403,7 @@ const MatchRecordEvents: React.FC<MatchRecordEventsProps> = ({
                 });
                 resetForm();
               }}
+              disabled={isSubmitting}
               className="bg-blue-2 rounded-md px-4 py-2 text-white outline-none focus:outline-none"
             >
               Add Card
@@ -414,6 +472,7 @@ const MatchRecordEvents: React.FC<MatchRecordEventsProps> = ({
                 }
                 resetForm();
               }}
+              disabled={isSubmitting}
               className="bg-blue-2 rounded-md px-4 py-2 text-white outline-none focus:outline-none"
             >
               Add Substitution

@@ -81,55 +81,6 @@ export function useMatchRoomSocket(matchId?: number | null) {
 
     s.emit("join", { matchId });
 
-    const onNew: ServerToClientEvents["stats:new"] = ({
-      matchId: mid,
-      stat,
-    }) => {
-      if (mid !== matchId) return;
-      queryClient.setQueryData(["match", matchId], (old: any) => {
-        if (!old) return old;
-        const prev: any[] = Array.isArray(old.stats) ? old.stats : [];
-        const exists = prev.some((x) => x.id === stat.id);
-        return {
-          ...old,
-          stats: exists
-            ? prev.map((x) => (x.id === stat.id ? stat : x))
-            : [...prev, stat].sort(
-                (a, b) => a.minute - b.minute || a.id - b.id,
-              ),
-        };
-      });
-    };
-
-    const onUpdate: ServerToClientEvents["stats:update"] = ({
-      matchId: mid,
-      stat,
-    }) => {
-      if (mid !== matchId) return;
-      queryClient.setQueryData(["match", matchId], (old: any) => {
-        if (!old) return old;
-        const prev: any[] = Array.isArray(old.stats) ? old.stats : [];
-        return {
-          ...old,
-          stats: prev
-            .map((x) => (x.id === stat.id ? stat : x))
-            .sort((a, b) => a.minute - b.minute || a.id - b.id),
-        };
-      });
-    };
-
-    const onDelete: ServerToClientEvents["stats:delete"] = ({
-      matchId: mid,
-      statId,
-    }) => {
-      if (mid !== matchId) return;
-      queryClient.setQueryData(["match", matchId], (old: any) => {
-        if (!old) return old;
-        const prev: any[] = Array.isArray(old.stats) ? old.stats : [];
-        return { ...old, stats: prev.filter((x) => x.id !== statId) };
-      });
-    };
-
     const onClock: ServerToClientEvents["clock:update"] = (payload) => {
       if (payload.matchId !== matchId) return;
       queryClient.setQueryData(["match", matchId], (old: any) => {
@@ -159,17 +110,11 @@ export function useMatchRoomSocket(matchId?: number | null) {
       });
     };
 
-    s.on("stats:new", onNew);
-    s.on("stats:update", onUpdate);
-    s.on("stats:delete", onDelete);
     s.on("clock:update", onClock);
     s.on("counters:update", onCounters);
     s.on("match:update", onMatch);
 
     return () => {
-      s.off("stats:new", onNew);
-      s.off("stats:update", onUpdate);
-      s.off("stats:delete", onDelete);
       s.off("clock:update", onClock);
       s.off("counters:update", onCounters);
       s.off("match:update", onMatch);
