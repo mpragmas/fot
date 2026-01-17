@@ -10,7 +10,16 @@ import LiveTimelineSection, {
   RecordedEvent,
 } from "./_components/LiveTimelineSection";
 import { useMatchClockControls } from "@/app/hooks/useMatchClockControls";
-import { useMatchRoomSocket } from "@/app/hooks/useMatchRoomSocket";
+import {
+  useMatchRoomSocket,
+  addPendingCreate,
+  removePendingCreate,
+  addPendingDelete,
+  removePendingDelete,
+  markStatAsCreated,
+  deletedStatIds,
+  recentlyUpdatedStatIds,
+} from "@/app/hooks/useMatchRoomSocket";
 import Lineup from "@/app/fan/match/[id]/lineup/page";
 import LineupReport from "./_components/LineupReport";
 
@@ -56,6 +65,7 @@ type MatchStatLite = {
     | "SUBSTITUTION";
   minute: number;
   createdAt: string;
+  half?: number | null;
 };
 
 function fullName(p: PlayerLite) {
@@ -114,7 +124,6 @@ export default function MatchControlPage() {
     endFirstHalf: rawControls.endFirstHalf,
     startSecondHalf: rawControls.startSecondHalf,
     endMatch: rawControls.endMatch,
-    addExtraTime: rawControls.addExtraTime,
     pauseClock: rawControls.pauseClock,
     resumeClock: rawControls.resumeClock,
     undoLastAction: rawControls.undoLastAction,
@@ -166,6 +175,12 @@ export default function MatchControlPage() {
     () => computeScore(stats, homePlayerIds, awayPlayerIds),
     [stats, homePlayerIds, awayPlayerIds],
   );
+
+  const currentHalf = useMemo<1 | 2>(() => {
+    const phase = match?.phase ?? "PRE";
+    if (phase === "SECOND_HALF" || phase === "ET" || phase === "FT") return 2;
+    return 1;
+  }, [match?.phase]);
 
   const currentMinute = useMemo(() => {
     const elapsed = match?.elapsedSeconds ?? 0;
@@ -280,6 +295,7 @@ export default function MatchControlPage() {
         team,
         playerId: g.playerId,
         playerName: p ? fullName(p) : undefined,
+        half: (g.half as 1 | 2 | null | undefined) ?? currentHalf,
       };
 
       if (assist && assistPlayer) {
@@ -319,6 +335,7 @@ export default function MatchControlPage() {
           playerName: p
             ? `${fullName(p)} (second yellow → red)`
             : "Unknown (second yellow → red)",
+          half: (r.half as 1 | 2 | null | undefined) ?? currentHalf,
         });
       } else {
         result.push({
@@ -328,6 +345,7 @@ export default function MatchControlPage() {
           team,
           playerId: r.playerId,
           playerName: p ? fullName(p) : undefined,
+          half: (r.half as 1 | 2 | null | undefined) ?? currentHalf,
         });
       }
     }
@@ -345,6 +363,7 @@ export default function MatchControlPage() {
         team,
         playerId: y.playerId,
         playerName: p ? fullName(p) : undefined,
+        half: (y.half as 1 | 2 | null | undefined) ?? currentHalf,
       });
     }
 
@@ -375,6 +394,9 @@ export default function MatchControlPage() {
             ? fullName(p1)
             : "Substitution";
 
+      // Use the half from the first substitution stat, or default to currentHalf
+      const subHalf = (list[0].half as 1 | 2 | null | undefined) ?? currentHalf;
+
       result.push({
         id: list[0].id,
         type: "SUBSTITUTION",
@@ -382,31 +404,103 @@ export default function MatchControlPage() {
         team,
         playerId: list[0].playerId,
         playerName: label,
+        half: subHalf,
       });
     }
 
     return result;
-  }, [homePlayerIds, playersById, stats]);
+  }, [awayPlayerIds, currentHalf, homePlayerIds, playersById, stats]);
 
   const createStatMutation = useMutation({
     mutationFn: async (payload: {
       playerId: number;
       type: MatchStatLite["type"];
       minute: number;
+      half?: 1 | 2;
     }) => {
+      const body = {
+        ...payload,
+        // Default half to the current half on the match if the caller
+        // doesn't specify it (used for cards/substitutions that don't care).
+        half: payload.half ?? currentHalf,
+      };
       const res = await fetch(`/api/matches/${matchId}/stats`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error("Failed to create stat");
       return res.json();
     },
-    onSuccess: () => {
-      // Always refetch from server after create so we have the authoritative
-      // list of stats (including yellow+red pairs, etc.) and avoid any
-      // duplicated or flickering optimistic entries.
-      queryClient.invalidateQueries({ queryKey: ["match", matchId] });
+    onMutate: async (payload) => {
+      // Mark this create as pending BEFORE making API call
+      const half = (payload.half as 1 | 2 | undefined) ?? currentHalf;
+      addPendingCreate(payload.playerId, payload.type, payload.minute);
+
+      await queryClient.cancelQueries({ queryKey: ["match", matchId] });
+      const previous = queryClient.getQueryData<any>(["match", matchId]);
+
+      queryClient.setQueryData<any>(["match", matchId], (old: any) => {
+        if (!old) return old;
+        const prev: any[] = Array.isArray(old.stats) ? old.stats : [];
+
+        const optimisticId = -Date.now();
+
+        const nextStats = [
+          ...prev,
+          {
+            id: optimisticId,
+            matchId,
+            playerId: payload.playerId,
+            type: payload.type,
+            minute: payload.minute,
+            half,
+            createdAt: new Date().toISOString(),
+          },
+        ].sort((a, b) => a.minute - b.minute || a.id - b.id);
+
+        return { ...old, stats: nextStats };
+      });
+
+      return { previous, payload };
+    },
+    onError: (_err, payload, ctx) => {
+      // Remove pending tracking on error
+      removePendingCreate(payload.playerId, payload.type, payload.minute);
+      if (ctx?.previous)
+        queryClient.setQueryData(["match", matchId], ctx.previous);
+    },
+    onSuccess: (serverStat, payload) => {
+      // Remove pending tracking and mark as created
+      removePendingCreate(payload.playerId, payload.type, payload.minute);
+      const realStats = Array.isArray(serverStat) ? serverStat : [serverStat];
+      realStats.forEach((s) => s && markStatAsCreated(s.id));
+
+      // Replace optimistic entries with real server response
+      queryClient.setQueryData<any>(["match", matchId], (old: any) => {
+        if (!old) return old;
+        const prev: any[] = Array.isArray(old.stats) ? old.stats : [];
+        // Remove all optimistic entries (negative IDs) AND filter out tombstoned stats
+        const existingReal = prev.filter(
+          (s) => s.id > 0 && !deletedStatIds.has(s.id),
+        );
+        // Add new stats from server (avoiding duplicates and tombstoned)
+        const existingIds = new Set(existingReal.map((s) => s.id));
+        const toAdd = realStats.filter(
+          (s) => s && !existingIds.has(s.id) && !deletedStatIds.has(s.id),
+        );
+        const merged = [...existingReal, ...toAdd];
+        return {
+          ...old,
+          stats: merged.sort((a, b) => {
+            const halfA = a.half === 2 ? 1 : 0;
+            const halfB = b.half === 2 ? 1 : 0;
+            if (halfA !== halfB) return halfA - halfB;
+            if (a.minute !== b.minute) return a.minute - b.minute;
+            return a.id - b.id;
+          }),
+        };
+      });
     },
   });
 
@@ -414,10 +508,15 @@ export default function MatchControlPage() {
     mutationFn: async (payload: {
       statId: number;
       playerId: number;
-      type: MatchStatLite["type"];
       minute: number;
+      half?: 1 | 2;
+      type?: MatchStatLite["type"];
     }) => {
-      const { statId, ...body } = payload;
+      const { statId, ...rest } = payload;
+      // Only send type if the caller wants to change it; otherwise preserve
+      // the existing type on the server.
+      const body: any = { ...rest };
+      if (!body.type) delete body.type;
       const res = await fetch(`/api/matches/${matchId}/stats/${statId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -440,8 +539,9 @@ export default function MatchControlPage() {
                 ? {
                     ...s,
                     playerId: payload.playerId,
-                    type: payload.type,
+                    type: payload.type ?? s.type,
                     minute: payload.minute,
+                    half: payload.half ?? s.half,
                   }
                 : s,
             )
@@ -450,13 +550,45 @@ export default function MatchControlPage() {
       });
       return { previous };
     },
-    onError: (_err, _payload, ctx) => {
-      if (ctx?.previous)
+    onError: (_err, payload, ctx) => {
+      if (ctx?.previous) {
+        // If the socket already told us it's updated, DO NOT ROLLBACK this specific stat.
+        if (recentlyUpdatedStatIds.has(payload.statId)) {
+           const current = queryClient.getQueryData<any>(["match", matchId]);
+           const currentStat = current?.stats?.find((s:any) => s.id === payload.statId);
+           
+           if (currentStat) {
+               // Restore previous, but overwrite with current confirmed stat
+               const restored = { ...ctx.previous };
+               restored.stats = restored.stats.map((s:any) => s.id === payload.statId ? currentStat : s);
+               queryClient.setQueryData(["match", matchId], restored);
+               return;
+           }
+        }
         queryClient.setQueryData(["match", matchId], ctx.previous);
+      }
     },
-    onSuccess: () => {
-      // After an edit, refetch from server to keep the list authoritative.
-      queryClient.invalidateQueries({ queryKey: ["match", matchId] });
+    onSuccess: (serverStat) => {
+      // Update cache with server response, filtering tombstoned stats
+      queryClient.setQueryData<any>(["match", matchId], (old: any) => {
+        if (!old) return old;
+        const prev: any[] = Array.isArray(old.stats) ? old.stats : [];
+        // Filter out tombstoned stats before updating
+        const filtered = prev.filter((s) => !deletedStatIds.has(s.id));
+        const updated = filtered.map((s) =>
+          s.id === serverStat?.id ? serverStat : s,
+        );
+        return {
+          ...old,
+          stats: updated.sort((a, b) => {
+            const halfA = a.half === 2 ? 1 : 0;
+            const halfB = b.half === 2 ? 1 : 0;
+            if (halfA !== halfB) return halfA - halfB;
+            if (a.minute !== b.minute) return a.minute - b.minute;
+            return a.id - b.id;
+          }),
+        };
+      });
     },
   });
 
@@ -466,26 +598,57 @@ export default function MatchControlPage() {
         method: "DELETE",
       });
       if (!res.ok) throw new Error("Failed to delete stat");
-      return res.json();
+      // Some handlers may return 204 No Content for deletes.
+      if (res.status === 204) return null;
+      try {
+        return await res.json();
+      } catch {
+        return null;
+      }
     },
     onMutate: async (statId) => {
+      // Mark this delete as pending BEFORE making API call
+      addPendingDelete(statId);
+
       await queryClient.cancelQueries({ queryKey: ["match", matchId] });
       const previous = queryClient.getQueryData<any>(["match", matchId]);
       queryClient.setQueryData<any>(["match", matchId], (old: any) => {
         if (!old) return old;
         const prev: any[] = Array.isArray(old.stats) ? old.stats : [];
+        const filtered = prev.filter((s) => s.id !== statId);
+        return { ...old, stats: filtered };
+      });
+      return { previous, statId };
+    },
+    onError: (err, statId, ctx) => {
+      // If the socket already told us it's deleted, DO NOT ROLLBACK the deletion of this stat.
+      if (deletedStatIds.has(statId)) {
+        if (ctx?.previous) {
+          // Restore everything else, but keep this stat deleted
+          const restored = { ...ctx.previous };
+          if (Array.isArray(restored.stats)) {
+            restored.stats = restored.stats.filter((s: any) => s.id !== statId);
+          }
+          queryClient.setQueryData(["match", matchId], restored);
+        }
+      } else {
+        if (ctx?.previous)
+          queryClient.setQueryData(["match", matchId], ctx.previous);
+      }
+      
+      // Remove pending tracking on error
+      removePendingDelete(statId);
+    },
+    onSuccess: (_result, statId) => {
+      // Remove pending tracking (with delay to catch late socket events)
+      removePendingDelete(statId);
+
+      // Ensure stat is removed from cache (should already be from onMutate)
+      queryClient.setQueryData<any>(["match", matchId], (old: any) => {
+        if (!old) return old;
+        const prev: any[] = Array.isArray(old.stats) ? old.stats : [];
         return { ...old, stats: prev.filter((s) => s.id !== statId) };
       });
-      return { previous };
-    },
-    onError: (_err, _statId, ctx) => {
-      if (ctx?.previous)
-        queryClient.setQueryData(["match", matchId], ctx.previous);
-    },
-    onSuccess: () => {
-      // Ensure we reflect the deletion from the backend, not just the
-      // optimistic cache update.
-      queryClient.invalidateQueries({ queryKey: ["match", matchId] });
     },
   });
 
@@ -499,45 +662,6 @@ export default function MatchControlPage() {
       if (!res.ok) throw new Error("Failed to update counters");
       return res.json();
     },
-    onMutate: async (body) => {
-      await queryClient.cancelQueries({ queryKey: ["match", matchId] });
-      const previous = queryClient.getQueryData<any>(["match", matchId]);
-      queryClient.setQueryData<any>(["match", matchId], (old: any) => {
-        if (!old) return old;
-        const current = old.counters ?? {
-          homeShotsOnTarget: 0,
-          awayShotsOnTarget: 0,
-          homeCorners: 0,
-          awayCorners: 0,
-        };
-        const next = {
-          homeShotsOnTarget: Math.max(
-            0,
-            (current.homeShotsOnTarget ?? 0) +
-              (body.homeShotsOnTargetDelta ?? 0),
-          ),
-          awayShotsOnTarget: Math.max(
-            0,
-            (current.awayShotsOnTarget ?? 0) +
-              (body.awayShotsOnTargetDelta ?? 0),
-          ),
-          homeCorners: Math.max(
-            0,
-            (current.homeCorners ?? 0) + (body.homeCornersDelta ?? 0),
-          ),
-          awayCorners: Math.max(
-            0,
-            (current.awayCorners ?? 0) + (body.awayCornersDelta ?? 0),
-          ),
-        };
-        return { ...old, counters: next };
-      });
-      return { previous };
-    },
-    onError: (_err, _body, ctx) => {
-      if (ctx?.previous)
-        queryClient.setQueryData(["match", matchId], ctx.previous);
-    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["match", matchId] });
     },
@@ -548,6 +672,7 @@ export default function MatchControlPage() {
       playerId: number;
       type: MatchStatLite["type"];
       minute: number;
+      half: 1 | 2;
     }) => {
       createStatMutation.mutate(payload);
     },
@@ -558,8 +683,8 @@ export default function MatchControlPage() {
     (payload: {
       statId: number;
       playerId: number;
-      type: MatchStatLite["type"];
       minute: number;
+      half?: 1 | 2;
     }) => {
       updateStatMutation.mutate(payload);
     },
@@ -620,6 +745,7 @@ export default function MatchControlPage() {
           awayTeamName={match.fixture.awayTeam.name}
           isSubmitting={createStatMutation.isPending}
           currentMinute={currentMinute}
+          defaultHalf={currentHalf}
         />
         <MatchVenue
           matchId={match.id}

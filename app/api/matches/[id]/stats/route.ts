@@ -114,14 +114,12 @@ export async function POST(
       );
     }
 
-    const { playerId, type, minute } = parsed.data;
+    const { playerId, type, minute, half } = parsed.data;
 
+    // --- Non-yellow card stats: idempotency check ---
     if (type !== "YELLOW_CARD") {
-      // For all non-yellow stats, make creation idempotent on
-      // (matchId, playerId, type, minute) so rapid double-clicks or
-      // network retries don't create duplicate rows.
       const existing = await prisma.matchStat.findFirst({
-        where: { matchId, playerId, type, minute },
+        where: { matchId, playerId, type, minute, half: half ?? undefined },
       });
       if (existing) {
         emitStat(matchId, existing);
@@ -129,7 +127,7 @@ export async function POST(
       }
 
       const stat = await prisma.matchStat.create({
-        data: { matchId, playerId, type, minute },
+        data: { matchId, playerId, type, minute, half: half ?? undefined },
       });
 
       emitStat(matchId, stat);
@@ -140,18 +138,32 @@ export async function POST(
       return NextResponse.json(stat, { status: 201 });
     }
 
+    // --- Yellow card: idempotency check first ---
+    // Check if a yellow card already exists for this exact combination
+    const existingYellow = await prisma.matchStat.findFirst({
+      where: { matchId, playerId, type: "YELLOW_CARD", minute, half: half ?? undefined },
+    });
+    if (existingYellow) {
+      // Already exists - return it without creating duplicate
+      emitStat(matchId, existingYellow);
+      return NextResponse.json(existingYellow, { status: 200 });
+    }
+
+    // Count existing yellows for this player in this match (for second yellow detection)
     const previousYellows = await prisma.matchStat.count({
       where: { matchId, playerId, type: "YELLOW_CARD" },
     });
 
     const created = await prisma.$transaction(async (tx) => {
       const yellow = await tx.matchStat.create({
-        data: { matchId, playerId, type: "YELLOW_CARD", minute },
+        data: { matchId, playerId, type: "YELLOW_CARD", minute, half },
       });
 
-      if (previousYellows >= 1) {
+      // Only create red card if this is exactly the second yellow (previousYellows === 1)
+      // Not >= 1, because that would create multiple red cards
+      if (previousYellows === 1) {
         const red = await tx.matchStat.create({
-          data: { matchId, playerId, type: "RED_CARD", minute },
+          data: { matchId, playerId, type: "RED_CARD", minute, half },
         });
         return { yellow, red };
       }

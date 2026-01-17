@@ -22,7 +22,6 @@ interface MatchReportHeaderProps {
     endFirstHalf: () => void;
     startSecondHalf: () => void;
     endMatch: () => void;
-    addExtraTime: (minutes: number) => void;
     pauseClock: () => void;
     resumeClock: () => void;
     undoLastAction: () => void;
@@ -63,7 +62,6 @@ const MatchReportHeader = ({
     endFirstHalf,
     startSecondHalf,
     endMatch,
-    addExtraTime,
     pauseClock,
     resumeClock,
     undoLastAction,
@@ -122,8 +120,6 @@ const MatchReportHeader = ({
   const handleStartMatch = () => startMatch();
   const handleEndFirstHalf = () => endFirstHalf();
   const handleStartSecondHalf = () => startSecondHalf();
-  const handleAddExtraTime = () =>
-    addExtraTime(Math.floor(effectiveElapsedSeconds / 60));
   const handleEndMatch = () => endMatch();
 
   const handlePauseClock = () => pauseClock();
@@ -188,16 +184,9 @@ const MatchReportHeader = ({
               <button
                 onClick={handlePauseClock}
                 disabled={isLoading}
-                className="bg-gray-2 rounded-md px-4 py-2 shadow disabled:opacity-50"
+                className="rounded-md border border-gray-200 bg-white px-4 py-2 shadow disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Pause Clock
-              </button>
-              <button
-                onClick={handleAddExtraTime}
-                disabled={isLoading}
-                className="bg-gray-2 rounded-md px-4 py-2 shadow disabled:opacity-50"
-              >
-                Add Extra Time
               </button>
               <button
                 onClick={handleEndMatch}
@@ -222,16 +211,9 @@ const MatchReportHeader = ({
               <button
                 onClick={handleResumeClock}
                 disabled={isLoading}
-                className="bg-gray-2 rounded-md px-4 py-2 shadow disabled:opacity-50"
+                className="rounded-md border border-gray-200 bg-white px-4 py-2 shadow disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Resume Clock
-              </button>
-              <button
-                onClick={handleAddExtraTime}
-                disabled={isLoading}
-                className="bg-gray-2 rounded-md px-4 py-2 shadow disabled:opacity-50"
-              >
-                Add Extra Time
               </button>
               <button
                 onClick={handleEndMatch}
@@ -246,16 +228,23 @@ const MatchReportHeader = ({
           {(phase === "SECOND_HALF" || phase === "ET") && (
             <>
               <button
-                onClick={handleAddExtraTime}
+                onClick={handlePauseClock}
                 disabled={isLoading}
-                className="bg-gray-2 rounded-md px-4 py-2 shadow disabled:opacity-50"
+                className="rounded-md border border-gray-200 bg-white px-4 py-2 shadow disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Add Extra Time
+                Pause Clock
+              </button>
+              <button
+                onClick={handleResumeClock}
+                disabled={isLoading}
+                className="rounded-md border border-gray-200 bg-white px-4 py-2 shadow disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Resume Clock
               </button>
               <button
                 onClick={handleEndMatch}
                 disabled={isLoading}
-                className="bg-red-1 text-red-2 rounded-md px-4 py-2 shadow disabled:opacity-50"
+                className="bg-red-1 text-red-2 rounded-md px-4 py-2 shadow disabled:cursor-not-allowed disabled:opacity-50"
               >
                 End Match
               </button>

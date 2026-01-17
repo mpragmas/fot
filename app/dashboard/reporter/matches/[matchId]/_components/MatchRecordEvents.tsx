@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState, memo } from "react";
 import type { RecordedEventTeam } from "./LiveTimelineSection";
 
 type MatchStatType =
@@ -12,6 +12,85 @@ type MatchStatType =
   | "RED_CARD"
   | "SUBSTITUTION";
 
+// --- Reusable Counter Row Component ---
+interface CounterRowProps {
+  label: string;
+  homeTeamName: string;
+  awayTeamName: string;
+  homeValue: number;
+  awayValue: number;
+  onHomeMinus: () => void;
+  onHomePlus: () => void;
+  onAwayMinus: () => void;
+  onAwayPlus: () => void;
+}
+
+const CounterRow = memo<CounterRowProps>(function CounterRow({
+  label,
+  homeTeamName,
+  awayTeamName,
+  homeValue,
+  awayValue,
+  onHomeMinus,
+  onHomePlus,
+  onAwayMinus,
+  onAwayPlus,
+}) {
+  return (
+    <div className="rounded-lg border border-gray-200 p-4">
+      <div className="mb-3 text-sm font-semibold text-gray-700">{label}</div>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div className="flex items-center justify-between rounded-md bg-gray-50 p-3">
+          <div>
+            <div className="text-xs text-gray-500">{homeTeamName}</div>
+            <div className="text-xl font-bold text-gray-800">{homeValue}</div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onHomeMinus}
+              className="rounded-md border border-gray-200 px-3 py-1 text-sm font-semibold hover:bg-gray-100 transition-colors"
+            >
+              -
+            </button>
+            <button
+              type="button"
+              onClick={onHomePlus}
+              className="rounded-md border border-gray-200 px-3 py-1 text-sm font-semibold hover:bg-gray-100 transition-colors"
+            >
+              +
+            </button>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between rounded-md bg-gray-50 p-3">
+          <div>
+            <div className="text-xs text-gray-500">{awayTeamName}</div>
+            <div className="text-xl font-bold text-gray-800">{awayValue}</div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onAwayMinus}
+              className="rounded-md border border-gray-200 px-3 py-1 text-sm font-semibold hover:bg-gray-100 transition-colors"
+            >
+              -
+            </button>
+            <button
+              type="button"
+              onClick={onAwayPlus}
+              className="rounded-md border border-gray-200 px-3 py-1 text-sm font-semibold hover:bg-gray-100 transition-colors"
+            >
+              +
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+});
+
+// --- Main Component Props ---
 interface MatchRecordEventsProps {
   homePlayers: { id: number; name: string }[];
   awayPlayers: { id: number; name: string }[];
@@ -19,6 +98,7 @@ interface MatchRecordEventsProps {
     playerId: number;
     type: MatchStatType;
     minute: number;
+    half: 1 | 2;
   }) => void;
   counters: {
     homeShotsOnTarget: number;
@@ -32,6 +112,7 @@ interface MatchRecordEventsProps {
   awayTeamName: string;
   isSubmitting: boolean;
   currentMinute?: number;
+  defaultHalf?: 1 | 2;
 }
 
 const MatchRecordEvents: React.FC<MatchRecordEventsProps> = ({
@@ -45,6 +126,7 @@ const MatchRecordEvents: React.FC<MatchRecordEventsProps> = ({
   awayTeamName,
   isSubmitting,
   currentMinute,
+  defaultHalf,
 }) => {
   const tabs = [
     "Goals",
@@ -72,85 +154,38 @@ const MatchRecordEvents: React.FC<MatchRecordEventsProps> = ({
     "YELLOW_CARD",
   );
 
-  // Whenever the current match minute changes, if the user hasn't typed a
-  // specific value (we treat "0" as default), sync the form minute to it.
+  // Controls whether the minute field follows the live match clock, and
+  // whether the user has manually edited the minute (in which case we stop
+  // auto-syncing until they re-enable it).
+  const [useLiveMinute, setUseLiveMinute] = useState(true);
+  const [hasTouchedMinute, setHasTouchedMinute] = useState(false);
+
+  // Track which half this event belongs to. Default from parent when given.
+  const [half, setHalf] = useState<1 | 2>(defaultHalf ?? 1);
+
+  // Lightweight per-tab error message so the user knows why a click did nothing.
+  const [goalError, setGoalError] = useState<string | null>(null);
+  const [cardError, setCardError] = useState<string | null>(null);
+  const [subError, setSubError] = useState<string | null>(null);
+
+  // Keep half in sync with the current match half when it changes.
   useEffect(() => {
-    if (currentMinute == null) return;
-    if (minute === "0" || minute === "") {
-      setMinute(String(Math.max(0, Math.floor(currentMinute))));
+    if (defaultHalf === 1 || defaultHalf === 2) {
+      setHalf(defaultHalf);
     }
-  }, [currentMinute, minute]);
+  }, [defaultHalf]);
 
-  const CounterRow = ({
-    label,
-    homeValue,
-    awayValue,
-    onHomeMinus,
-    onHomePlus,
-    onAwayMinus,
-    onAwayPlus,
-  }: {
-    label: string;
-    homeValue: number;
-    awayValue: number;
-    onHomeMinus: () => void;
-    onHomePlus: () => void;
-    onAwayMinus: () => void;
-    onAwayPlus: () => void;
-  }) => {
-    return (
-      <div className="rounded-lg border border-gray-200 p-4">
-        <div className="mb-3 text-sm font-semibold text-gray-700">{label}</div>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div className="flex items-center justify-between rounded-md bg-gray-50 p-3">
-            <div>
-              <div className="text-xs text-gray-500">{homeTeamName}</div>
-              <div className="text-xl font-bold text-gray-800">{homeValue}</div>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={onHomeMinus}
-                className="rounded-md border border-gray-200 px-3 py-1 text-sm font-semibold"
-              >
-                -
-              </button>
-              <button
-                type="button"
-                onClick={onHomePlus}
-                className="rounded-md border border-gray-200 px-3 py-1 text-sm font-semibold"
-              >
-                +
-              </button>
-            </div>
-          </div>
+  // Whenever the current match minute changes, if live-sync is enabled and
+  // the user hasn't manually edited the field, keep the form minute in sync.
+  useEffect(() => {
+    if (!useLiveMinute) return;
+    if (currentMinute == null) return;
+    if (hasTouchedMinute) return;
+    setMinute(String(Math.max(0, Math.floor(currentMinute))));
+  }, [currentMinute, useLiveMinute, hasTouchedMinute]);
 
-          <div className="flex items-center justify-between rounded-md bg-gray-50 p-3">
-            <div>
-              <div className="text-xs text-gray-500">{awayTeamName}</div>
-              <div className="text-xl font-bold text-gray-800">{awayValue}</div>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={onAwayMinus}
-                className="rounded-md border border-gray-200 px-3 py-1 text-sm font-semibold"
-              >
-                -
-              </button>
-              <button
-                type="button"
-                onClick={onAwayPlus}
-                className="rounded-md border border-gray-200 px-3 py-1 text-sm font-semibold"
-              >
-                +
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
+
+
 
   const parsedMinute = Number.isFinite(Number(minute))
     ? Math.max(0, Math.floor(Number(minute)))
@@ -166,6 +201,9 @@ const MatchRecordEvents: React.FC<MatchRecordEventsProps> = ({
     setCardPlayerId("");
     setSubOffPlayerId("");
     setSubOnPlayerId("");
+    setGoalError(null);
+    setCardError(null);
+    setSubError(null);
   }, []);
 
   const teamPlayers = useMemo(
@@ -196,7 +234,10 @@ const MatchRecordEvents: React.FC<MatchRecordEventsProps> = ({
         className="border-gray-2 w-full rounded-md border p-2 outline-none focus:outline-none"
         inputMode="numeric"
         value={minute}
-        onChange={(e) => setMinute(e.target.value)}
+        onChange={(e) => {
+          setHasTouchedMinute(true);
+          setMinute(e.target.value);
+        }}
         placeholder="e.g. 23"
       />
     </div>
@@ -315,7 +356,10 @@ const MatchRecordEvents: React.FC<MatchRecordEventsProps> = ({
               type="button"
               onClick={() => {
                 const playerId = Number(goalPlayerId);
-                if (!Number.isFinite(playerId) || playerId < 1) return;
+                if (!Number.isFinite(playerId) || playerId < 1) {
+                  setGoalError("Select a goal scorer.");
+                  return;
+                }
                 const type: MatchStatType = penalty
                   ? "PENALTY_GOAL"
                   : ownGoal
@@ -325,6 +369,7 @@ const MatchRecordEvents: React.FC<MatchRecordEventsProps> = ({
                   playerId,
                   type,
                   minute: parsedMinute,
+                  half,
                 });
                 const aId = Number(assistPlayerId);
                 if (
@@ -338,6 +383,7 @@ const MatchRecordEvents: React.FC<MatchRecordEventsProps> = ({
                     playerId: aId,
                     type: "ASSIST",
                     minute: parsedMinute,
+                    half,
                   });
                 }
                 resetForm();
@@ -345,10 +391,47 @@ const MatchRecordEvents: React.FC<MatchRecordEventsProps> = ({
               disabled={isSubmitting}
               className="bg-blue-2 rounded-md px-4 py-2 text-white outline-none focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Add Goal
+              {isSubmitting ? "Adding..." : "Add Goal"}
             </button>
+            {goalError && (
+              <span className="text-xs text-red-500">{goalError}</span>
+            )}
           </div>
         </>
+      )}
+
+      {(activeTab === "Goals" ||
+        activeTab === "Cards" ||
+        activeTab === "Substitution") && (
+        <div className="mt-2 flex flex-wrap items-center gap-4 text-sm text-gray-600">
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              className="h-4 w-4"
+              checked={useLiveMinute}
+              onChange={(e) => {
+                const next = e.target.checked;
+                setUseLiveMinute(next);
+                if (next) {
+                  setHasTouchedMinute(false);
+                }
+              }}
+            />
+            <span>Use live match time</span>
+          </label>
+
+          <div className="flex items-center gap-2">
+            <span>Half:</span>
+            <select
+              className="border-gray-2 rounded-md border p-1 text-sm outline-none focus:outline-none"
+              value={half}
+              onChange={(e) => setHalf(Number(e.target.value) === 2 ? 2 : 1)}
+            >
+              <option value={1}>1st</option>
+              <option value={2}>2nd</option>
+            </select>
+          </div>
+        </div>
       )}
 
       {activeTab === "Cards" && (
@@ -395,19 +478,26 @@ const MatchRecordEvents: React.FC<MatchRecordEventsProps> = ({
               type="button"
               onClick={() => {
                 const playerId = Number(cardPlayerId);
-                if (!Number.isFinite(playerId) || playerId < 1) return;
+                if (!Number.isFinite(playerId) || playerId < 1) {
+                  setCardError("Select a player for the card.");
+                  return;
+                }
                 onCreateStat({
                   playerId,
                   type: cardColor,
                   minute: parsedMinute,
+                  half,
                 });
                 resetForm();
               }}
               disabled={isSubmitting}
-              className="bg-blue-2 rounded-md px-4 py-2 text-white outline-none focus:outline-none"
+              className="bg-blue-2 rounded-md px-4 py-2 text-white outline-none focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Add Card
+              {isSubmitting ? "Adding..." : "Add Card"}
             </button>
+            {cardError && (
+              <span className="ml-3 text-xs text-red-500">{cardError}</span>
+            )}
           </div>
         </>
       )}
@@ -456,18 +546,26 @@ const MatchRecordEvents: React.FC<MatchRecordEventsProps> = ({
               onClick={() => {
                 const offId = Number(subOffPlayerId);
                 const onId = Number(subOnPlayerId);
-                if (!Number.isFinite(offId) || offId < 1) return;
-                if (!Number.isFinite(onId) || onId < 1) return;
+                if (!Number.isFinite(offId) || offId < 1) {
+                  setSubError("Select the player going off.");
+                  return;
+                }
+                if (!Number.isFinite(onId) || onId < 1) {
+                  setSubError("Select the player coming on.");
+                  return;
+                }
                 onCreateStat({
                   playerId: offId,
                   type: "SUBSTITUTION",
                   minute: parsedMinute,
+                  half,
                 });
                 if (onId !== offId) {
                   onCreateStat({
                     playerId: onId,
                     type: "SUBSTITUTION",
                     minute: parsedMinute,
+                    half,
                   });
                 }
                 resetForm();
@@ -475,8 +573,11 @@ const MatchRecordEvents: React.FC<MatchRecordEventsProps> = ({
               disabled={isSubmitting}
               className="bg-blue-2 rounded-md px-4 py-2 text-white outline-none focus:outline-none"
             >
-              Add Substitution
+              {isSubmitting ? "Adding..." : "Add Substitution"}
             </button>
+            {subError && (
+              <span className="ml-3 text-xs text-red-500">{subError}</span>
+            )}
           </div>
         </>
       )}
@@ -485,6 +586,8 @@ const MatchRecordEvents: React.FC<MatchRecordEventsProps> = ({
         <>
           <CounterRow
             label="Shots on Target"
+            homeTeamName={homeTeamName}
+            awayTeamName={awayTeamName}
             homeValue={counters.homeShotsOnTarget}
             awayValue={counters.awayShotsOnTarget}
             onHomeMinus={() => onAdjustShotsOnTarget("HOME", -1)}
@@ -499,6 +602,8 @@ const MatchRecordEvents: React.FC<MatchRecordEventsProps> = ({
         <>
           <CounterRow
             label="Corners"
+            homeTeamName={homeTeamName}
+            awayTeamName={awayTeamName}
             homeValue={counters.homeCorners}
             awayValue={counters.awayCorners}
             onHomeMinus={() => onAdjustCorners("HOME", -1)}
@@ -512,4 +617,5 @@ const MatchRecordEvents: React.FC<MatchRecordEventsProps> = ({
   );
 };
 
-export default MatchRecordEvents;
+export default memo(MatchRecordEvents);
+

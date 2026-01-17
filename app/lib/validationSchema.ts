@@ -117,6 +117,7 @@ export const createMatchStatSchema = z.object({
   playerId: z.number().min(1, "Player is required"),
   type: statTypeEnum,
   minute: z.number().int().min(0, "Minute must be >= 0"),
+  half: z.number().int().min(1).max(2).optional(),
 });
 
 export const upsertLineupSchema = z.object({
@@ -135,6 +136,7 @@ export const patchMatchStatSchema = z.object({
   playerId: z.number().min(1, "Player is required").optional(),
   type: statTypeEnum.optional(),
   minute: z.number().int().min(0, "Minute must be >= 0").optional(),
+  half: z.number().int().min(1).max(2).optional(),
 });
 
 export const patchLineupItemSchema = z.object({

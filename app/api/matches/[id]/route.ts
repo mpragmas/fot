@@ -64,6 +64,7 @@ export async function GET(
             playerId: true,
             type: true,
             minute: true,
+            half: true,
             createdAt: true,
           },
         },

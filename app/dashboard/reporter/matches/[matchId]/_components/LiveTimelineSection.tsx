@@ -22,6 +22,7 @@ export interface RecordedEvent {
   team: RecordedEventTeam;
   playerId: number;
   playerName?: string;
+  half?: 1 | 2;
 }
 
 // --- Timeline Item Component ---
@@ -112,14 +113,24 @@ const TimelineItem: React.FC<TimelineItemProps> = ({
   );
 };
 
-function formatMinute(minute: number) {
+function formatMinute(minute: number, half?: 1 | 2) {
   if (!Number.isFinite(minute) || minute < 0) return "0'";
+  if (half === 1 && minute > 45) {
+    return `45+${minute - 45}'`;
+  }
+  if (half === 2 && minute > 90) {
+    return `90+${minute - 90}'`;
+  }
   return `${minute}'`;
 }
 
 function sortKey(event: RecordedEvent) {
-  const base = Number.isFinite(event.minute) ? event.minute : 0;
-  return base * 100;
+  const minute = Number.isFinite(event.minute) ? event.minute : 0;
+  // Sort all first-half events before all second-half events regardless of
+  // the absolute minute value, so 45+6' (stored e.g. as 51, half=1) always
+  // appears before any second-half minute like 47' (minute=47, half=2).
+  const halfBucket = event.half === 2 ? 1 : 0;
+  return halfBucket * 100000 + minute;
 }
 
 // --- Format Recorded Event into Timeline props ---
@@ -157,9 +168,9 @@ const toTimelineProps = (
                 ? `Red card for ${event.playerName ?? "Unknown"}`
                 : `Substitution: ${event.playerName ?? "Unknown"}`;
 
-  const subtitleParts = [`${formatMinute(event.minute)} ${teamName}`].filter(
-    Boolean,
-  ) as string[];
+  const subtitleParts = [
+    `${formatMinute(event.minute, event.half)} ${teamName}`,
+  ].filter(Boolean) as string[];
 
   return {
     side: event.team === "HOME" ? "right" : "left",
@@ -185,8 +196,8 @@ interface LiveTimelineSectionProps {
   onEditEvent: (payload: {
     statId: number;
     playerId: number;
-    type: RecordedEventType;
     minute: number;
+    half?: 1 | 2;
   }) => void;
 }
 
@@ -204,7 +215,7 @@ export default function LiveTimelineSection({
   const [editingId, setEditingId] = React.useState<number | null>(null);
   const [editMinute, setEditMinute] = React.useState<string>("0");
   const [editPlayerId, setEditPlayerId] = React.useState<string>("");
-  const [editType, setEditType] = React.useState<RecordedEventType>("GOAL");
+  const [editHalf, setEditHalf] = React.useState<1 | 2>(1);
 
   const allPlayers = React.useMemo(
     () => [...homePlayers, ...awayPlayers],
@@ -216,7 +227,7 @@ export default function LiveTimelineSection({
       setEditingId(e.id);
       setEditMinute(String(e.minute));
       setEditPlayerId(String(e.playerId));
-      setEditType(e.type);
+      setEditHalf(e.half === 2 ? 2 : 1);
     },
     [setEditingId],
   );
@@ -235,10 +246,10 @@ export default function LiveTimelineSection({
       statId: editingId,
       minute: Math.floor(minute),
       playerId,
-      type: editType,
+      half: editHalf,
     });
     setEditingId(null);
-  }, [editingId, editMinute, editPlayerId, editType, onEditEvent]);
+  }, [editingId, editMinute, editPlayerId, editHalf, onEditEvent]);
 
   const sortedEvents = React.useMemo(() => {
     if (!events || events.length === 0) return [];
@@ -250,6 +261,10 @@ export default function LiveTimelineSection({
     return copy;
   }, [events]);
 
+  const firstSecondHalfIndex = React.useMemo(() => {
+    return sortedEvents.findIndex((e) => e.half === 2);
+  }, [sortedEvents]);
+
   return (
     <div className="mt-6 flex flex-col gap-6 lg:flex-row lg:items-start">
       {/* TIMELINE */}
@@ -260,31 +275,21 @@ export default function LiveTimelineSection({
           {/* Vertical center line */}
           <div className="bg-gray-2 absolute inset-y-0 left-1/2 w-px -translate-x-1/2" />
 
-          {sortedEvents.map((event) => (
+          {sortedEvents.map((event, index) => (
             <div key={event.id}>
+              {firstSecondHalfIndex === index && index > 0 && (
+                <div className="my-4 flex items-center gap-3">
+                  <div className="h-px flex-1 bg-gray-200" />
+                  <span className="text-xs font-semibold text-gray-400 uppercase">
+                    Second half
+                  </span>
+                  <div className="h-px flex-1 bg-gray-200" />
+                </div>
+              )}
+
               {editingId === event.id ? (
                 <div className="mb-8 rounded-lg border border-gray-200 p-4">
                   <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-                    <div>
-                      <label className="mb-1 block text-sm text-gray-600">
-                        Type
-                      </label>
-                      <select
-                        className="border-gray-2 w-full rounded-md border p-2 outline-none focus:outline-none"
-                        value={editType}
-                        onChange={(ev) =>
-                          setEditType(ev.target.value as RecordedEventType)
-                        }
-                      >
-                        <option value="GOAL">Goal</option>
-                        <option value="PENALTY_GOAL">Penalty goal</option>
-                        <option value="OWN_GOAL">Own goal</option>
-                        <option value="ASSIST">Assist</option>
-                        <option value="YELLOW_CARD">Yellow card</option>
-                        <option value="RED_CARD">Red card</option>
-                        <option value="SUBSTITUTION">Substitution</option>
-                      </select>
-                    </div>
                     <div>
                       <label className="mb-1 block text-sm text-gray-600">
                         Player
@@ -305,12 +310,33 @@ export default function LiveTimelineSection({
                       <label className="mb-1 block text-sm text-gray-600">
                         Minute
                       </label>
-                      <input
+                      <select
                         className="border-gray-2 w-full rounded-md border p-2 outline-none focus:outline-none"
-                        inputMode="numeric"
                         value={editMinute}
                         onChange={(ev) => setEditMinute(ev.target.value)}
-                      />
+                      >
+                        {/* Simple numeric options up to 120; keep input UX consistent */}
+                        {Array.from({ length: 121 }, (_, i) => (
+                          <option key={i} value={String(i)}>
+                            {i}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-sm text-gray-600">
+                        Half
+                      </label>
+                      <select
+                        className="border-gray-2 w-full rounded-md border p-2 outline-none focus:outline-none"
+                        value={editHalf}
+                        onChange={(ev) =>
+                          setEditHalf(Number(ev.target.value) === 2 ? 2 : 1)
+                        }
+                      >
+                        <option value={1}>1st</option>
+                        <option value={2}>2nd</option>
+                      </select>
                     </div>
                     <div className="flex items-end gap-2">
                       <button

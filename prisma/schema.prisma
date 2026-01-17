@@ -240,6 +240,7 @@ model MatchStat {
   playerId    Int
   type        StatType
   minute      Int
+  half        Int?
   createdAt   DateTime  @default(now())
 }
 
