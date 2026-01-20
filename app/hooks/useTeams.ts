@@ -7,6 +7,7 @@ import { useToast } from "@/app/components/ToastProvider";
 type ApiTeam = {
   id: number;
   name: string;
+  logo: string | null;
   coach: string | null;
   location: string | null;
   leagueId: number;
@@ -25,6 +26,7 @@ type ApiTeam = {
 export type Team = {
   id: number;
   name: string;
+  logo: string | null;
   leagueName: string;
   coach: string | null;
   location: string | null;
@@ -82,6 +84,7 @@ export function useTeams(arg?: UseTeamsArg) {
       query.data?.data.map((t) => ({
         id: t.id,
         name: t.name,
+        logo: t.logo,
         leagueName: t.league?.name ?? "",
         coach: t.coach,
         location: t.location,

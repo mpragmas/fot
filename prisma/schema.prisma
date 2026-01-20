@@ -123,6 +123,7 @@ model Team {
   leagueId         Int
   coach          String?
  location         String?
+  logo             String?
   players          Player[]
   homeFixtures     Fixture[] @relation("HomeFixtures")
   awayFixtures     Fixture[] @relation("AwayFixtures")
@@ -143,6 +144,7 @@ model Player {
   position     String
   age          Int?
   number       Int?
+  image        String?
   team         Team?     @relation(fields: [teamId], references: [id])
   teamId       Int?
   stats        PlayerStat[]

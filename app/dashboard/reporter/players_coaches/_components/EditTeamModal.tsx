@@ -5,6 +5,7 @@ import { useLeagues } from "@/app/hooks/useLeagues";
 import { useUpdateTeam } from "@/app/hooks/useTeams";
 import type { Team } from "@/app/hooks/useTeams";
 import BaseModal from "@/app/components/BaseModal";
+import ImageUploadField from "@/app/components/ImageUploadField";
 
 interface EditTeamModalProps {
   open: boolean;
@@ -20,12 +21,14 @@ const EditTeamModal = ({ open, team, onClose }: EditTeamModalProps) => {
   const [leagueId, setLeagueId] = useState<number | "">("");
   const [coach, setCoach] = useState<string>("");
   const [location, setLocation] = useState<string>("");
+  const [logo, setLogo] = useState<string | null>(null);
 
   useEffect(() => {
     if (team) {
       setName(team.name);
       setCoach(team.coach ?? "");
       setLocation(team.location ?? "");
+      setLogo(team.logo ?? null);
       const league = leagues.find((l) => l.name === team.leagueName);
       setLeagueId(league ? league.id : "");
     }
@@ -41,6 +44,7 @@ const EditTeamModal = ({ open, team, onClose }: EditTeamModalProps) => {
       leagueId: typeof leagueId === "number" ? leagueId : undefined,
       coach,
       location,
+      logo: logo || undefined,
     });
 
     onClose();
@@ -108,6 +112,8 @@ const EditTeamModal = ({ open, team, onClose }: EditTeamModalProps) => {
             />
           </div>
         </div>
+
+        <ImageUploadField label="Team logo" value={logo} onChange={setLogo} />
 
         <div className="mt-4 flex justify-end gap-2">
           <button

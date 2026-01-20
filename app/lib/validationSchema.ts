@@ -7,6 +7,7 @@ export const playerSchema = z.object({
   age: z.number().int().min(1, "Age must be positive").optional(),
   number: z.number().min(1, "Number is required").nullable().optional(),
   teamId: z.number().min(1, "Team is required").nullable().optional(),
+  image: z.string().url().optional().nullable(),
 });
 
 export const patchPlayerSchema = z.object({
@@ -16,6 +17,7 @@ export const patchPlayerSchema = z.object({
   age: z.number().int().min(1).optional(),
   number: z.number().nullable().optional(),
   teamId: z.number().nullable().optional(),
+  image: z.string().url().nullable().optional(),
 });
 
 export const leagueSchema = z.object({
@@ -49,6 +51,7 @@ export const teamSchema = z.object({
   leagueId: z.number().min(1, "League is required"),
   coach: z.string().optional().nullable(),
   location: z.string().optional().nullable(),
+  logo: z.string().url().optional().nullable(),
 });
 
 export const patchTeamSchema = z.object({
@@ -56,6 +59,7 @@ export const patchTeamSchema = z.object({
   leagueId: z.number().optional(),
   coach: z.string().optional().nullable(),
   location: z.string().optional().nullable(),
+  logo: z.string().url().nullable().optional(),
 });
 
 export const passwordSchema = z

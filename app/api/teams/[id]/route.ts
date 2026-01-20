@@ -48,10 +48,11 @@ export async function PATCH(
       );
     }
 
-    const { name, leagueId, coach } = validation.data;
+    const { name, leagueId, coach, logo } = validation.data;
     const data = {
       ...(name !== undefined ? { name } : {}),
       ...(coach !== undefined ? { coach } : {}),
+      ...(logo !== undefined ? { logo } : {}),
       ...(leagueId !== undefined
         ? { league: { connect: { id: leagueId } } }
         : {}),

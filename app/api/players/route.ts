@@ -52,6 +52,7 @@ export async function POST(req: NextRequest) {
         age: body.age,
         number: body.number,
         teamId: body.teamId ?? null,
+        image: body.image ?? null,
       },
     });
 

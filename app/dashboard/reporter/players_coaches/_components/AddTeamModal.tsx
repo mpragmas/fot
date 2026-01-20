@@ -4,6 +4,7 @@ import React, { useState, FormEvent } from "react";
 import { useLeagues } from "@/app/hooks/useLeagues";
 import { useCreateTeam } from "@/app/hooks/useTeams";
 import BaseModal from "@/app/components/BaseModal";
+import ImageUploadField from "@/app/components/ImageUploadField";
 
 interface AddTeamModalProps {
   open: boolean;
@@ -18,6 +19,7 @@ const AddTeamModal = ({ open, onClose }: AddTeamModalProps) => {
   const [leagueId, setLeagueId] = useState<number | "">("");
   const [coach, setCoach] = useState("");
   const [location, setLocation] = useState("");
+  const [logo, setLogo] = useState<string | null>(null);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -28,12 +30,14 @@ const AddTeamModal = ({ open, onClose }: AddTeamModalProps) => {
       leagueId: Number(leagueId),
       coach: coach || undefined,
       location: location || undefined,
+      logo: logo || undefined,
     });
 
     setName("");
     setLeagueId("");
     setCoach("");
     setLocation("");
+    setLogo(null);
     onClose();
   };
 
@@ -98,6 +102,8 @@ const AddTeamModal = ({ open, onClose }: AddTeamModalProps) => {
             />
           </div>
         </div>
+
+        <ImageUploadField label="Team logo" value={logo} onChange={setLogo} />
 
         <div className="mt-4 flex justify-end gap-2">
           <button

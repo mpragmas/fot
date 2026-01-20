@@ -5,6 +5,7 @@ import BaseModal from "@/app/components/BaseModal";
 import { useTeams } from "@/app/hooks/useTeams";
 import { useLeagues } from "@/app/hooks/useLeagues";
 import { useCreatePlayer } from "@/app/hooks/usePlayers";
+import ImageUploadField from "@/app/components/ImageUploadField";
 
 interface AddPlayerModalProps {
   open: boolean;
@@ -25,6 +26,7 @@ const AddPlayerModal = ({ open, onClose }: AddPlayerModalProps) => {
   const [age, setAge] = useState<number | "">("");
   const [number, setNumber] = useState<number | "">("");
   const [teamId, setTeamId] = useState<number | "">("");
+  const [image, setImage] = useState<string | null>(null);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -37,6 +39,7 @@ const AddPlayerModal = ({ open, onClose }: AddPlayerModalProps) => {
       age: age ? Number(age) : undefined,
       number: number ? Number(number) : null,
       teamId: teamId ? Number(teamId) : null,
+      image: image || undefined,
     });
 
     setFirstName("");
@@ -46,6 +49,7 @@ const AddPlayerModal = ({ open, onClose }: AddPlayerModalProps) => {
     setNumber("");
     setTeamId("");
     setLeagueId("");
+    setImage(null);
     onClose();
   };
 
@@ -82,6 +86,12 @@ const AddPlayerModal = ({ open, onClose }: AddPlayerModalProps) => {
             />
           </div>
         </div>
+
+        <ImageUploadField
+          label="Player image"
+          value={image}
+          onChange={setImage}
+        />
 
         <div className="grid grid-cols-2 gap-3">
           <div>

@@ -12,6 +12,7 @@ type ApiPlayer = {
   position: string;
   number: number;
   teamId: number | null;
+  image: string | null;
   team?: { leagueId: number };
 };
 
@@ -23,6 +24,7 @@ export type Player = {
   number: number;
   teamId: number | null;
   leagueId?: number;
+  image?: string | null;
 };
 
 interface PlayersResponse {
@@ -81,6 +83,7 @@ export function usePlayers(options: PlayersQueryOptions) {
         number: p.number,
         teamId: p.teamId,
         leagueId: p.team?.leagueId,
+        image: p.image,
       })) ?? [],
     total: query.data?.total ?? 0,
     isLoading: query.isLoading,
@@ -112,9 +115,10 @@ export function useCreatePlayer() {
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
-        const errorMessage = typeof errorData?.error === "string" 
-          ? errorData.error 
-          : JSON.stringify(errorData?.error || "Failed to create player");
+        const errorMessage =
+          typeof errorData?.error === "string"
+            ? errorData.error
+            : JSON.stringify(errorData?.error || "Failed to create player");
         throw new Error(errorMessage);
       }
 
@@ -155,9 +159,10 @@ export function useUpdatePlayer() {
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
-        const errorMessage = typeof errorData?.error === "string" 
-          ? errorData.error 
-          : JSON.stringify(errorData?.error || "Failed to update player");
+        const errorMessage =
+          typeof errorData?.error === "string"
+            ? errorData.error
+            : JSON.stringify(errorData?.error || "Failed to update player");
         throw new Error(errorMessage);
       }
 

@@ -57,6 +57,7 @@ export async function POST(req: NextRequest) {
         leagueId: body.leagueId,
         coach: body.coach ?? null,
         location: body.location ?? null,
+        logo: body.logo ?? null,
       },
     });
 
