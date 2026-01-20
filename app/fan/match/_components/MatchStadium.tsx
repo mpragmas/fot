@@ -1,4 +1,8 @@
+"use client";
+
 import React from "react";
+import { useParams } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 
 const IconPin = () => (
   <svg viewBox="0 0 24 24" className="h-4 w-4 text-gray-300">
@@ -19,11 +23,26 @@ type Props = {
 const formatNum = (n: number) => n.toLocaleString();
 
 const MatchStadium: React.FC<Props> = ({
-  name = "Jan Breydelstadion",
-  location = "Brugge, Belgium",
+  name,
+  location,
   capacity = 29062,
   attendance = 27037,
 }) => {
+  const params = useParams();
+  const matchId = Number(params.id);
+
+  const { data: match } = useQuery({
+    queryKey: ["match", matchId],
+    queryFn: async () => {
+      const res = await fetch(`/api/matches/${matchId}`);
+      if (!res.ok) throw new Error("Failed to fetch match");
+      return res.json();
+    },
+    enabled: Number.isFinite(matchId),
+  });
+
+  const stadiumName = match?.fixture?.stadium ?? name ?? "";
+  const stadiumLocation = location ?? "";
   const percent = Math.round((attendance / capacity) * 100);
 
   return (
@@ -31,8 +50,8 @@ const MatchStadium: React.FC<Props> = ({
       <div className="mb-2 flex items-center gap-2">
         <IconPin />
         <div>
-          <div className="text-base font-semibold">{name}</div>
-          <div className="text-xs text-gray-400">{location}</div>
+          <div className="text-base font-semibold">{stadiumName}</div>
+          <div className="text-xs text-gray-400">{stadiumLocation}</div>
         </div>
       </div>
 

@@ -36,6 +36,21 @@ type MatchCounters = {
   updatedAt: string;
 };
 
+type LineupItem = {
+  id: number;
+  matchId: number;
+  playerId: number;
+  position: string;
+  isStarting: boolean;
+  player?: {
+    id: number;
+    firstName: string;
+    lastName: string | null;
+    number: number | null;
+    teamId: number | null;
+  } | null;
+};
+
 type ServerToClientEvents = {
   "stats:new": (payload: { matchId: number; stat: MatchStat }) => void;
   "stats:update": (payload: { matchId: number; stat: MatchStat }) => void;
@@ -51,6 +66,10 @@ type ServerToClientEvents = {
     counters: MatchCounters;
   }) => void;
   "match:update": (payload: { matchId: number; status: MatchStatus }) => void;
+  "lineup:update": (payload: {
+    matchId: number;
+    lineups: LineupItem[];
+  }) => void;
 };
 
 type ClientToServerEvents = {
@@ -166,16 +185,18 @@ export function useMatchRoomSocket(matchId?: number | null) {
       queryClient.setQueryData(["match", matchId], (old: any) => {
         if (!old) return old;
         const prev: MatchStat[] = Array.isArray(old.stats) ? old.stats : [];
-        
+
         // Check if this stat already exists (by ID) OR if there's a matching optimistic stat
         const isDuplicate = prev.some((s) => {
           // Exact ID match
           if (s.id === payload.stat.id) return true;
           // Optimistic match: negative ID + same properties
-          if (s.id < 0 && 
-              s.playerId === payload.stat.playerId && 
-              s.type === payload.stat.type && 
-              s.minute === payload.stat.minute) {
+          if (
+            s.id < 0 &&
+            s.playerId === payload.stat.playerId &&
+            s.type === payload.stat.type &&
+            s.minute === payload.stat.minute
+          ) {
             return true;
           }
           return false;
@@ -266,12 +287,26 @@ export function useMatchRoomSocket(matchId?: number | null) {
       });
     };
 
+    const onLineupUpdate: ServerToClientEvents["lineup:update"] = (payload) => {
+      if (payload.matchId !== matchId) return;
+
+      // Primary source of truth for lineups
+      queryClient.setQueryData(["lineups", matchId], payload.lineups);
+
+      // Also mirror into the match object if present
+      queryClient.setQueryData(["match", matchId], (old: any) => {
+        if (!old) return old;
+        return { ...old, lineups: payload.lineups };
+      });
+    };
+
     s.on("stats:new", onStatNew);
     s.on("stats:update", onStatUpdate);
     s.on("stats:delete", onStatDelete);
     s.on("clock:update", onClock);
     s.on("counters:update", onCounters);
     s.on("match:update", onMatch);
+    s.on("lineup:update", onLineupUpdate);
 
     s.onAny((event, payload) => {
       if (
@@ -290,6 +325,7 @@ export function useMatchRoomSocket(matchId?: number | null) {
       s.off("clock:update", onClock);
       s.off("counters:update", onCounters);
       s.off("match:update", onMatch);
+      s.off("lineup:update", onLineupUpdate);
 
       s.offAny();
     };

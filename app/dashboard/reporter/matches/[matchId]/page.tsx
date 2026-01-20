@@ -47,6 +47,7 @@ type PlayerLite = {
   lastName: string | null;
   number: number | null;
   teamId: number | null;
+  position?: string | null;
 };
 
 type MatchStatLite = {
@@ -554,16 +555,20 @@ export default function MatchControlPage() {
       if (ctx?.previous) {
         // If the socket already told us it's updated, DO NOT ROLLBACK this specific stat.
         if (recentlyUpdatedStatIds.has(payload.statId)) {
-           const current = queryClient.getQueryData<any>(["match", matchId]);
-           const currentStat = current?.stats?.find((s:any) => s.id === payload.statId);
-           
-           if (currentStat) {
-               // Restore previous, but overwrite with current confirmed stat
-               const restored = { ...ctx.previous };
-               restored.stats = restored.stats.map((s:any) => s.id === payload.statId ? currentStat : s);
-               queryClient.setQueryData(["match", matchId], restored);
-               return;
-           }
+          const current = queryClient.getQueryData<any>(["match", matchId]);
+          const currentStat = current?.stats?.find(
+            (s: any) => s.id === payload.statId,
+          );
+
+          if (currentStat) {
+            // Restore previous, but overwrite with current confirmed stat
+            const restored = { ...ctx.previous };
+            restored.stats = restored.stats.map((s: any) =>
+              s.id === payload.statId ? currentStat : s,
+            );
+            queryClient.setQueryData(["match", matchId], restored);
+            return;
+          }
         }
         queryClient.setQueryData(["match", matchId], ctx.previous);
       }
@@ -615,7 +620,43 @@ export default function MatchControlPage() {
       queryClient.setQueryData<any>(["match", matchId], (old: any) => {
         if (!old) return old;
         const prev: any[] = Array.isArray(old.stats) ? old.stats : [];
-        const filtered = prev.filter((s) => s.id !== statId);
+        const target = prev.find((s) => s.id === statId);
+
+        // By default, remove just the requested stat.
+        let idsToRemove = [statId];
+
+        // Special case: if this is a red card that represented
+        // "second yellow -> red", also drop the paired yellow
+        // from the local cache so the UI matches the DB.
+        if (target && target.type === "RED_CARD") {
+          const pairedYellow = prev.find(
+            (s) =>
+              s.type === "YELLOW_CARD" &&
+              s.playerId === target.playerId &&
+              s.minute === target.minute,
+          );
+          if (pairedYellow) {
+            idsToRemove = [...idsToRemove, pairedYellow.id];
+          }
+        }
+
+        // Special case: if this is a substitution, also drop the other
+        // player's substitution stat from the local cache so the UI
+        // matches the DB.
+        if (target && target.type === "SUBSTITUTION") {
+          const pairedSubstitution = prev.find(
+            (s) =>
+              s.type === "SUBSTITUTION" &&
+              s.minute === target.minute &&
+              s.playerId !== target.playerId,
+          );
+          if (pairedSubstitution) {
+            idsToRemove = [...idsToRemove, pairedSubstitution.id];
+          }
+        }
+
+        const idsSet = new Set(idsToRemove);
+        const filtered = prev.filter((s) => !idsSet.has(s.id));
         return { ...old, stats: filtered };
       });
       return { previous, statId };
@@ -635,7 +676,7 @@ export default function MatchControlPage() {
         if (ctx?.previous)
           queryClient.setQueryData(["match", matchId], ctx.previous);
       }
-      
+
       // Remove pending tracking on error
       removePendingDelete(statId);
     },
@@ -693,9 +734,37 @@ export default function MatchControlPage() {
 
   const handleDeleteStat = useCallback(
     (statId: number) => {
+      // If this is a substitution event, we want to remove both
+      // players involved in the substitution (off + on) for that
+      // team and minute, not just a single stat row.
+      const matchData: any = queryClient.getQueryData(["match", matchId]);
+      const stats: any[] = Array.isArray(matchData?.stats)
+        ? matchData.stats
+        : [];
+      const target = stats.find((s) => s.id === statId);
+
+      if (target && target.type === "SUBSTITUTION") {
+        const isHome = homePlayerIds.has(target.playerId);
+        const groupIds = stats
+          .filter(
+            (s) =>
+              s.type === "SUBSTITUTION" &&
+              s.minute === target.minute &&
+              (isHome
+                ? homePlayerIds.has(s.playerId)
+                : awayPlayerIds.has(s.playerId)),
+          )
+          .map((s) => s.id);
+
+        const uniqueIds = Array.from(new Set(groupIds));
+        uniqueIds.forEach((id) => deleteStatMutation.mutate(id));
+        return;
+      }
+
+      // Default: delete a single stat.
       deleteStatMutation.mutate(statId);
     },
-    [deleteStatMutation],
+    [deleteStatMutation, homePlayerIds, awayPlayerIds, matchId, queryClient],
   );
 
   const handleAdjustShotsOnTarget = useCallback(
@@ -754,6 +823,26 @@ export default function MatchControlPage() {
           stadium={match.fixture.stadium ?? ""}
         />
       </div>
+
+      <LineupReport
+        matchId={match.id}
+        homeTeamName={match.fixture.homeTeam.name}
+        awayTeamName={match.fixture.awayTeam.name}
+        homePlayers={homePlayers.map((p) => ({
+          id: p.id,
+          name: fullName(p),
+          number: p.number,
+          position: p.position ?? null,
+          teamId: p.teamId,
+        }))}
+        awayPlayers={awayPlayers.map((p) => ({
+          id: p.id,
+          name: fullName(p),
+          number: p.number,
+          position: p.position ?? null,
+          teamId: p.teamId,
+        }))}
+      />
 
       <LiveTimelineSection
         events={events}

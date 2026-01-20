@@ -1,8 +1,13 @@
-import React from "react";
+"use client";
+
+import React, { useMemo } from "react";
 import Image from "next/image";
+import { useQuery } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 
 type Team = { name: string; short: string; color: string };
 type Fixture = {
+  id: number;
   home: Team;
   away: Team;
   hs: number;
@@ -19,11 +24,12 @@ const Crest: React.FC<{ team: Team }> = ({ team }) => (
   </div>
 );
 
-const Row: React.FC<{ f: Fixture; highlighted?: boolean }> = ({
-  f,
-  highlighted,
-}) => (
-  <div className="px-3 py-3">
+const Row: React.FC<{
+  f: Fixture;
+  highlighted?: boolean;
+  onClick: () => void;
+}> = ({ f, highlighted, onClick }) => (
+  <div className="px-3 py-3" onClick={onClick}>
     <div
       className={[
         "grid grid-cols-6 items-center rounded-xl",
@@ -54,45 +60,38 @@ const Row: React.FC<{ f: Fixture; highlighted?: boolean }> = ({
   </div>
 );
 
-const data: Fixture[] = [
-  {
-    home: { name: "Brighton", short: "BHA", color: "#2563eb" },
-    away: { name: "Leeds", short: "LEE", color: "#fbbf24" },
-    hs: 3,
-    as: 0,
-    status: "FT",
-  },
-  {
-    home: { name: "Burnley", short: "BUR", color: "#7c2d12" },
-    away: { name: "Arsenal", short: "ARS", color: "#ef4444" },
-    hs: 0,
-    as: 2,
-    status: "FT",
-  },
-  {
-    home: { name: "Crystal Palace", short: "CRY", color: "#1d4ed8" },
-    away: { name: "Brentford", short: "BRE", color: "#dc2626" },
-    hs: 2,
-    as: 0,
-    status: "FT",
-  },
-  {
-    home: { name: "Fulham", short: "FUL", color: "#6b7280" },
-    away: { name: "Wolves", short: "WOL", color: "#f59e0b" },
-    hs: 3,
-    as: 0,
-    status: "FT",
-  },
-  {
-    home: { name: "Nottm Forest", short: "NFO", color: "#dc2626" },
-    away: { name: "Man United", short: "MUN", color: "#ef4444" },
-    hs: 2,
-    as: 2,
-    status: "FT",
-  },
-];
-
 const MatchFixture: React.FC = () => {
+  const router = useRouter();
+
+  const { data } = useQuery({
+    queryKey: ["matches", "fan-sidebar"],
+    queryFn: async () => {
+      const res = await fetch("/api/matches");
+      if (!res.ok) throw new Error("Failed to fetch matches");
+      return res.json();
+    },
+  });
+
+  const fixtures: Fixture[] = useMemo(() => {
+    if (!data?.data) return [];
+    return (data.data as any[]).slice(0, 5).map((m) => {
+      const homeName = m.fixture?.homeTeam?.name ?? "Home";
+      const awayName = m.fixture?.awayTeam?.name ?? "Away";
+      const homeShort = homeName.substring(0, 3).toUpperCase();
+      const awayShort = awayName.substring(0, 3).toUpperCase();
+      const status: Fixture["status"] =
+        m.status === "COMPLETED" ? "FT" : m.status === "LIVE" ? "LIVE" : "HT";
+      return {
+        id: m.id,
+        home: { name: homeName, short: homeShort, color: "#2563eb" },
+        away: { name: awayName, short: awayShort, color: "#ef4444" },
+        hs: m.homeScore ?? 0,
+        as: m.awayScore ?? 0,
+        status,
+      };
+    });
+  }, [data]);
+
   return (
     <div className="mt-5 w-full max-w-sm rounded-2xl bg-[#1a1a1a] text-gray-200 shadow-lg">
       <div className="flex items-center justify-between px-4 py-4">
@@ -103,11 +102,12 @@ const MatchFixture: React.FC = () => {
         <Image src="/images/logo.png" alt="League" width={40} height={40} />
       </div>
       <div className="divide-dark-2 divide-y">
-        {data.map((f, i) => (
+        {fixtures.map((f, i) => (
           <Row
-            key={`${f.home.short}-${f.away.short}-${f.hs}-${f.as}`}
+            key={f.id}
             f={f}
             highlighted={i === 0}
+            onClick={() => router.push(`/fan/match/${f.id}`)}
           />
         ))}
       </div>

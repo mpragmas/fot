@@ -120,6 +120,19 @@ export const createMatchStatSchema = z.object({
   half: z.number().int().min(1).max(2).optional(),
 });
 
+export const absenceTypeEnum = z.enum([
+  "RED_CARD",
+  "FIVE_YELLOW_CARDS",
+  "INJURY",
+  "PERSONAL",
+]);
+
+export const upsertAbsenceSchema = z.object({
+  playerId: z.number().min(1, "Player is required"),
+  type: absenceTypeEnum,
+  note: z.string().max(500).optional(),
+});
+
 export const upsertLineupSchema = z.object({
   items: z
     .array(

@@ -49,6 +49,13 @@ enum StatType {
   SUBSTITUTION
 }
 
+enum AbsenceType {
+  RED_CARD
+  FIVE_YELLOW_CARDS
+  INJURY
+  PERSONAL
+}
+
 enum ProposalStatus {
   PENDING
   APPROVED
@@ -142,6 +149,7 @@ model Player {
   lineups      Lineup[]
   matchStats   MatchStat[]
   transfers    Transfer[]
+  absences     MatchAbsence[]
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 }
@@ -182,6 +190,7 @@ model Match {
   lineups     Lineup[]
   stats       MatchStat[]
   counters   MatchCounters?
+  absences    MatchAbsence[]
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 }
@@ -230,6 +239,18 @@ model Lineup {
   playerId    Int
   position    String
   isStarting  Boolean   @default(false)
+}
+
+model MatchAbsence {
+  id       Int         @id @default(autoincrement())
+  match    Match       @relation(fields: [matchId], references: [id])
+  matchId  Int
+  player   Player      @relation(fields: [playerId], references: [id])
+  playerId Int
+  type     AbsenceType
+  note     String?
+
+  @@unique([matchId, playerId])
 }
 
 model MatchStat {

@@ -1,14 +1,50 @@
-import React from "react";
+"use client";
+
+import React, { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useParams } from "next/navigation";
+import { useMatchRoomSocket } from "@/app/hooks/useMatchRoomSocket";
 
 type Event = {
   minute: string;
-  type: "goal" | "yellow" | "sub";
+  type: "goal" | "penalty" | "yellow" | "red" | "sub";
   player: string;
   assist?: string;
   side: "home" | "away";
   subIn?: string;
   subOut?: string;
+  detail?: string;
   note?: string;
+};
+
+type PlayerLite = {
+  id: number;
+  firstName: string;
+  lastName: string | null;
+};
+
+type MatchStatLite = {
+  id: number;
+  matchId: number;
+  playerId: number;
+  type:
+    | "GOAL"
+    | "ASSIST"
+    | "OWN_GOAL"
+    | "PENALTY_GOAL"
+    | "YELLOW_CARD"
+    | "RED_CARD"
+    | "SHOT"
+    | "CORNER"
+    | "SUBSTITUTION";
+  minute: number;
+  half?: number | null;
+};
+
+const fetchMatch = async (id: number) => {
+  const res = await fetch(`/api/matches/${id}`);
+  if (!res.ok) throw new Error("Failed to fetch match");
+  return res.json();
 };
 
 const EventIcon: React.FC<{ type: Event["type"] }> = ({ type }) => (
@@ -21,6 +57,7 @@ const NonSubHome: React.FC<{ e: Event }> = ({ e }) => (
       <p className="text-dark dark:text-whitish inline-flex items-center gap-2 font-medium">
         {e.player}
       </p>
+      {e.detail && <p className="text-xs">{e.detail}</p>}
       {e.assist && <p className="text-xs">assist by {e.assist}</p>}
     </div>
     <EventIcon type={e.type} />
@@ -34,15 +71,16 @@ const NonSubAway: React.FC<{ e: Event }> = ({ e }) => (
       <p className="text-dark dark:text-whitish inline-flex items-center gap-2 font-medium">
         {e.player}
       </p>
+      {e.detail && <p className="text-xs">{e.detail}</p>}
       {e.assist && <p className="text-xs">assist by {e.assist}</p>}
     </div>
   </div>
 );
 
 const SubHome: React.FC<{ e: Event }> = ({ e }) => (
-  <div>
+  <div className="flex items-center gap-3">
     <EventIcon type="sub" />
-    <p>
+    <p className="flex flex-col">
       <span className="inline-flex items-center gap-1 text-green-400">
         {e.subIn}
       </span>
@@ -67,85 +105,16 @@ const SubAway: React.FC<{ e: Event }> = ({ e }) => (
   </div>
 );
 
-const events: Event[] = [
-  { minute: "15", type: "yellow", player: "Daniel Svensson", side: "away" },
-  {
-    minute: "22",
-    type: "goal",
-    player: "Phil Foden (1 - 0)",
-    assist: "Tijjani Reijnders",
-    side: "home",
-  },
-  {
-    minute: "29",
-    type: "goal",
-    player: "Erling Haaland (2 - 0)",
-    assist: "Jérémy Doku",
-    side: "home",
-  },
-  {
-    minute: "+2",
-    type: "goal",
-    player: "",
-    side: "home",
-    note: "+2 minutes added",
-  },
-  { minute: "HT", type: "goal", player: "HT 2 - 0", side: "home" },
-  {
-    minute: "57",
-    type: "goal",
-    player: "Phil Foden (3 - 0)",
-    assist: "Tijjani Reijnders",
-    side: "home",
-  },
-  {
-    minute: "66",
-    type: "sub",
-    player: "",
-    subIn: "Pascal Gross",
-    subOut: "Marcel Sabitzer",
-    side: "away",
-  },
-  {
-    minute: "66",
-    type: "sub",
-    player: "",
-    subIn: "Carney Chukwuemeka",
-    subOut: "Serhou Guirassy",
-    side: "away",
-  },
-  {
-    minute: "66",
-    type: "sub",
-    player: "",
-    subIn: "Emre Can",
-    subOut: "Ramy Bensebaïni",
-    side: "away",
-  },
-  {
-    minute: "66",
-    type: "sub",
-    player: "",
-    subIn: "Jobe Bellingham",
-    subOut: "Maximilian Beier",
-    side: "away",
-  },
-  {
-    minute: "72",
-    type: "goal",
-    player: "Waldemar Anton (3 - 1)",
-    assist: "Julian Ryerson",
-    side: "away",
-  },
-  { minute: "78", type: "yellow", player: "Savinho", side: "home" },
-];
-
 const icon = (type: Event["type"]) => {
   switch (type) {
     case "goal":
       return "⚽";
+    case "penalty":
+      return "⚽ (P)";
     case "yellow":
       return "🟨";
+    case "red":
+      return "🟥";
     case "sub":
       return "🔄";
     default:
@@ -154,6 +123,247 @@ const icon = (type: Event["type"]) => {
 };
 
 const MatchEvents: React.FC = () => {
+  const params = useParams();
+  const matchId = Number(params.id);
+
+  const { data: match } = useQuery({
+    queryKey: ["match", matchId],
+    queryFn: () => fetchMatch(matchId),
+    enabled: Number.isFinite(matchId),
+  });
+
+  useMatchRoomSocket(matchId);
+
+  const homePlayers: PlayerLite[] = useMemo(
+    () => match?.fixture?.homeTeam?.players ?? [],
+    [match?.fixture?.homeTeam?.players],
+  );
+  const awayPlayers: PlayerLite[] = useMemo(
+    () => match?.fixture?.awayTeam?.players ?? [],
+    [match?.fixture?.awayTeam?.players],
+  );
+
+  const homeIds = useMemo(
+    () => new Set(homePlayers.map((p) => p.id)),
+    [homePlayers],
+  );
+  const awayIds = useMemo(
+    () => new Set(awayPlayers.map((p) => p.id)),
+    [awayPlayers],
+  );
+
+  const playersById = useMemo(() => {
+    const map = new Map<number, PlayerLite>();
+    [...homePlayers, ...awayPlayers].forEach((p) => map.set(p.id, p));
+    return map;
+  }, [homePlayers, awayPlayers]);
+
+  const stats: MatchStatLite[] = useMemo(
+    () => match?.stats ?? [],
+    [match?.stats],
+  );
+
+  const events: Event[] = useMemo(() => {
+    if (!stats || stats.length === 0) return [];
+
+    const result: Event[] = [];
+
+    const formatMinute = (minute: number, half?: number | null): string => {
+      const h = half ?? 1;
+      if (h === 1) {
+        if (minute <= 45) return String(minute);
+        return `45+${minute - 45}`;
+      }
+      // second half and beyond
+      if (minute <= 90) return String(minute);
+      return `90+${minute - 90}`;
+    };
+    const sortStats = (arr: MatchStatLite[]) =>
+      [...arr].sort((a, b) => {
+        const halfA = a.half === 2 ? 1 : 0;
+        const halfB = b.half === 2 ? 1 : 0;
+        if (halfA !== halfB) return halfA - halfB;
+        if (a.minute !== b.minute) return a.minute - b.minute;
+        return a.id - b.id;
+      });
+
+    const goalLike: MatchStatLite[] = [];
+    const assists: MatchStatLite[] = [];
+    const yellows: MatchStatLite[] = [];
+    const reds: MatchStatLite[] = [];
+    const substitutions: MatchStatLite[] = [];
+
+    for (const s of stats) {
+      if (
+        s.type === "GOAL" ||
+        s.type === "OWN_GOAL" ||
+        s.type === "PENALTY_GOAL"
+      ) {
+        goalLike.push(s);
+      } else if (s.type === "ASSIST") {
+        assists.push(s);
+      } else if (s.type === "YELLOW_CARD") {
+        yellows.push(s);
+      } else if (s.type === "RED_CARD") {
+        reds.push(s);
+      } else if (s.type === "SUBSTITUTION") {
+        substitutions.push(s);
+      }
+    }
+
+    // Build assists lookup per (team, minute)
+    const assistsByTeamMinute = new Map<string, MatchStatLite[]>();
+    const keyFor = (team: "home" | "away", minute: number) =>
+      `${team}:${minute}`;
+
+    for (const a of assists) {
+      const isHome = homeIds.has(a.playerId);
+      const team = isHome ? "home" : "away";
+      const key = keyFor(team, a.minute);
+      const list = assistsByTeamMinute.get(key);
+      if (list) list.push(a);
+      else assistsByTeamMinute.set(key, [a]);
+    }
+
+    // Goals with assists
+    for (const g of sortStats(goalLike)) {
+      const isHome = homeIds.has(g.playerId);
+      const side: "home" | "away" = isHome ? "home" : "away";
+      const baseSide: "home" | "away" =
+        g.type === "OWN_GOAL" ? (side === "home" ? "away" : "home") : side;
+      const player = playersById.get(g.playerId);
+      const name = player
+        ? `${player.firstName}${player.lastName ? " " + player.lastName : ""}`
+        : "Unknown";
+      const key = keyFor(baseSide, g.minute);
+      const possibleAssists = assistsByTeamMinute.get(key) ?? [];
+      const assist = possibleAssists.find((a) => a.playerId !== g.playerId);
+      const assistPlayer = assist
+        ? playersById.get(assist.playerId)
+        : undefined;
+
+      const minuteLabel = formatMinute(g.minute, g.half);
+
+      result.push({
+        minute: minuteLabel,
+        type: g.type === "PENALTY_GOAL" ? "penalty" : "goal",
+        player: name,
+        assist: assistPlayer
+          ? `${assistPlayer.firstName}${
+              assistPlayer.lastName ? " " + assistPlayer.lastName : ""
+            }`
+          : undefined,
+        side: baseSide,
+        detail: g.type === "OWN_GOAL" ? "own goal" : undefined,
+      });
+    }
+
+    // Cards: collapse second yellow + red at same minute into a red card event
+    const yellowByPlayerMinute = new Map<string, MatchStatLite>();
+    for (const y of yellows) {
+      const key = `${y.playerId}:${y.minute}`;
+      yellowByPlayerMinute.set(key, y);
+    }
+
+    const consumedYellowKeys = new Set<string>();
+
+    for (const r of sortStats(reds)) {
+      const key = `${r.playerId}:${r.minute}`;
+      const pairedYellow = yellowByPlayerMinute.get(key);
+      const isHome = homeIds.has(r.playerId);
+      const side: "home" | "away" = isHome ? "home" : "away";
+      const player = playersById.get(r.playerId);
+      const name = player
+        ? `${player.firstName}${player.lastName ? " " + player.lastName : ""}`
+        : "Unknown";
+
+      if (pairedYellow) {
+        consumedYellowKeys.add(key);
+        result.push({
+          minute: formatMinute(r.minute, r.half),
+          type: "red",
+          player: name,
+          side,
+        });
+      } else {
+        result.push({
+          minute: formatMinute(r.minute, r.half),
+          type: "red",
+          player: name,
+          side,
+        });
+      }
+    }
+
+    for (const y of sortStats(yellows)) {
+      const key = `${y.playerId}:${y.minute}`;
+      if (consumedYellowKeys.has(key)) continue;
+      const isHome = homeIds.has(y.playerId);
+      const side: "home" | "away" = isHome ? "home" : "away";
+      const player = playersById.get(y.playerId);
+      const name = player
+        ? `${player.firstName}${player.lastName ? " " + player.lastName : ""}`
+        : "Unknown";
+      result.push({
+        minute: formatMinute(y.minute, y.half),
+        type: "yellow",
+        player: name,
+        side,
+      });
+    }
+
+    // Substitutions: group into one event per (team, minute) with in/out
+    const subsByTeamMinute = new Map<string, MatchStatLite[]>();
+    for (const s of substitutions) {
+      const isHome = homeIds.has(s.playerId);
+      const team: "home" | "away" = isHome ? "home" : "away";
+      const key = keyFor(team, s.minute);
+      const list = subsByTeamMinute.get(key);
+      if (list) list.push(s);
+      else subsByTeamMinute.set(key, [s]);
+    }
+
+    for (const [key, list] of subsByTeamMinute.entries()) {
+      if (!list.length) continue;
+      const [teamLabel, minuteStr] = key.split(":");
+      const minute = Number(minuteStr);
+      const side: "home" | "away" = teamLabel === "home" ? "home" : "away";
+
+      const sortedList = sortStats(list);
+      const first = playersById.get(sortedList[0].playerId);
+      const second = sortedList[1]
+        ? playersById.get(sortedList[1].playerId)
+        : undefined;
+
+      const subInName = second
+        ? `${second.firstName}${second.lastName ? " " + second.lastName : ""}`
+        : first
+          ? `${first.firstName}${first.lastName ? " " + first.lastName : ""}`
+          : "";
+      const subOutName = first
+        ? `${first.firstName}${first.lastName ? " " + first.lastName : ""}`
+        : undefined;
+
+      // Use the half from the first substitution entry for display formatting
+      const half = list[0]?.half ?? 1;
+
+      result.push({
+        minute: formatMinute(minute, half),
+        type: "sub",
+        player: "",
+        subIn: subInName,
+        subOut: subOutName,
+        side,
+      });
+    }
+
+    // Sort final events by minute and then preserve insertion order for same minute
+    return [...result].sort((a, b) => {
+      const ma = parseInt(a.minute, 10) || 0;
+      const mb = parseInt(b.minute, 10) || 0;
+      return ma - mb;
+    });
+  }, [stats, homeIds, awayIds, playersById]);
   return (
     <div className="dark:bg-dark-1 dark:text-dark-3 mt-5 flex justify-center rounded-2xl p-6">
       <div className="w-full max-w-3xl rounded-2xl p-6 shadow-lg">
