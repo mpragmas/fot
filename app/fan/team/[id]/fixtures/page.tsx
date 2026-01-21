@@ -184,11 +184,11 @@ const FixturesPage = async ({ params, searchParams }: FixturesPageProps) => {
       league: team.league?.name ?? "",
       home: {
         name: f.homeTeamName,
-        logo: "/images/logo.png",
+        logo: f.homeTeamLogo,
       },
       away: {
         name: f.awayTeamName,
-        logo: "/images/logo.png",
+        logo: f.awayTeamLogo,
       },
       score,
       upcoming,

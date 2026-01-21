@@ -78,7 +78,7 @@ const TeamTable = async ({ params }: SquadPageProps) => {
     : [];
 
   const rows: SquadRow[] = players.map((p) => ({
-    img: "https://upload.wikimedia.org/wikipedia/en/5/53/Arsenal_FC.svg",
+    img: p.image ?? "/images/default player image.png",
     name:
       [p.firstName, p.lastName].filter(Boolean).join(" ") || `Player ${p.id}`,
     position: p.position,

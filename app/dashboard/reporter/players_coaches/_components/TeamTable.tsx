@@ -101,7 +101,16 @@ const TeamTable = () => {
                 key={idx}
                 className="border-b border-gray-100 odd:bg-white even:bg-white hover:bg-gray-50"
               >
-                <td className="px-6 py-5 text-sm text-gray-800">{t.name}</td>
+                <td className="px-6 py-5 text-sm text-gray-800">
+                  <div className="flex items-center gap-2">
+                    <img
+                      src={t.logo ?? "/images/default team logo.png"}
+                      alt={t.name}
+                      className="h-6 w-6 rounded-full object-cover"
+                    />
+                    <span>{t.name}</span>
+                  </div>
+                </td>
                 <td className="px-6 py-5 text-sm text-gray-600">
                   {t.leagueName}
                 </td>

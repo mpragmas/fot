@@ -66,7 +66,7 @@ const Team = async ({ params }: TeamPageProps) => {
     return {
       score: `${gf}-${ga}`,
       color: resultColor,
-      img: "/images/logo.png",
+      img: team.logo ?? "/images/default team logo.png",
       alt: opponentName,
     };
   });
@@ -92,17 +92,17 @@ const Team = async ({ params }: TeamPageProps) => {
         teams: [
           {
             name: upcoming.homeTeamName,
-            img: "/images/logo.png",
+            logo: team.logo ?? "/images/default team logo.png",
             alt: upcoming.homeTeamName,
           },
           {
             name: upcoming.awayTeamName,
-            img: "/images/logo.png",
+            logo: team.logo ?? "/images/default team logo.png",
             alt: upcoming.awayTeamName,
           },
         ] as [
-          { name: string; img: string; alt: string },
-          { name: string; img: string; alt: string },
+          { name: string; logo: string; alt: string },
+          { name: string; logo: string; alt: string },
         ],
       }
     : null;
@@ -130,9 +130,11 @@ const Team = async ({ params }: TeamPageProps) => {
         competition: team.league?.name ?? "",
         home: isHome,
         team1: f.homeTeamName,
-        team1Logo: "/images/logo.png",
+        team1Logo:
+          f.homeTeamLogo ?? team.logo ?? "/images/default team logo.png",
         team2: f.awayTeamName,
-        team2Logo: "/images/logo.png",
+        team2Logo:
+          f.awayTeamLogo ?? team.logo ?? "/images/default team logo.png",
         time: timeLabel,
       };
     });

@@ -278,8 +278,8 @@ export const getLeagueMatchCards = cache(
       orderBy: [{ date: "desc" }, { id: "desc" }],
       take,
       include: {
-        homeTeam: { select: { id: true, name: true } },
-        awayTeam: { select: { id: true, name: true } },
+        homeTeam: { select: { id: true, name: true, logo: true } },
+        awayTeam: { select: { id: true, name: true, logo: true } },
         match: { select: { id: true, status: true } },
       },
     });
@@ -343,8 +343,8 @@ export const getLeagueMatchCards = cache(
         awayTeamId: f.awayTeam.id,
         homeTeam: f.homeTeam.name,
         awayTeam: f.awayTeam.name,
-        homeLogo: DEFAULT_LOGO,
-        awayLogo: DEFAULT_LOGO,
+        homeLogo: f.homeTeam.logo ?? DEFAULT_LOGO,
+        awayLogo: f.awayTeam.logo ?? DEFAULT_LOGO,
         score,
         ...(score ? {} : { time, date }),
       };
@@ -407,7 +407,8 @@ export const getSeasonTopStats = cache(async (seasonId: number) => {
           select: {
             firstName: true,
             lastName: true,
-            team: { select: { name: true } },
+            image: true,
+            team: { select: { name: true, logo: true } },
           },
         },
       },
@@ -453,21 +454,21 @@ export const getSeasonTopStats = cache(async (seasonId: number) => {
   const topScorers: PlayerStatCardItem[] = topScorersRaw.map((s) => ({
     name: toName(s.player),
     team: s.player.team?.name ?? "-",
-    teamLogo: DEFAULT_LOGO,
+    teamLogo: s.player.image || s.player.team?.logo || DEFAULT_LOGO,
     value: String(s.goals),
   }));
 
   const topAssists: PlayerStatCardItem[] = topAssistsRaw.map((s) => ({
     name: toName(s.player),
     team: s.player.team?.name ?? "-",
-    teamLogo: DEFAULT_LOGO,
+    teamLogo: s.player.image || s.player.team?.logo || DEFAULT_LOGO,
     value: String(s.assists),
   }));
 
   const topRated: PlayerStatCardItem[] = topGaRaw.map((s) => ({
     name: toName(s.player),
     team: s.player.team?.name ?? "-",
-    teamLogo: DEFAULT_LOGO,
+    teamLogo: s.player.image || s.player.team?.logo || DEFAULT_LOGO,
     value: String(s.goals + s.assists),
   }));
 
@@ -607,7 +608,7 @@ export const getSeasonTopTeamStats = cache(async (seasonId: number) => {
       assists: true,
       player: {
         select: {
-          team: { select: { id: true, name: true } },
+          team: { select: { id: true, name: true, logo: true } },
         },
       },
     },
@@ -640,19 +641,23 @@ export const getSeasonTopTeamStats = cache(async (seasonId: number) => {
     .slice(0, 3);
 
   const toCard = (
-    t: { name: string; goals: number; assists: number },
+    t: { name: string; goals: number; assists: number; logo?: string | null },
     value: number,
   ): TeamStatCardItem => ({
     name: t.name,
     team: t.name,
-    teamLogo: DEFAULT_LOGO,
+    teamLogo: t.logo ?? DEFAULT_LOGO,
     value: String(value),
   });
 
   return {
-    topScorers: topGoals.map((t) => toCard(t, t.goals)),
-    topAssists: topAssists.map((t) => toCard(t, t.assists)),
-    topRated: topGA.map((t) => toCard(t, t.goals + t.assists)),
+    topScorers: topGoals.map((t) => toCard({ ...t, logo: undefined }, t.goals)),
+    topAssists: topAssists.map((t) =>
+      toCard({ ...t, logo: undefined }, t.assists),
+    ),
+    topRated: topGA.map((t) =>
+      toCard({ ...t, logo: undefined }, t.goals + t.assists),
+    ),
   };
 });
 
@@ -672,6 +677,7 @@ export const getTeamOfWeekPlayers = cache(
           select: {
             firstName: true,
             lastName: true,
+            image: true,
           },
         },
       },
@@ -690,7 +696,7 @@ export const getTeamOfWeekPlayers = cache(
       return {
         name: name || `Player ${s.playerId}`,
         rating,
-        image: "",
+        image: s.player.image || DEFAULT_LOGO,
       };
     });
 
@@ -698,7 +704,7 @@ export const getTeamOfWeekPlayers = cache(
       players.push({
         name: "TBD",
         rating: "0.0",
-        image: "",
+        image: DEFAULT_LOGO,
       });
     }
 

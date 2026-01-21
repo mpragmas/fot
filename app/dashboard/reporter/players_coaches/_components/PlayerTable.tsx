@@ -156,7 +156,14 @@ const PlayerTable = () => {
                 className="border-b border-gray-100 odd:bg-white even:bg-white hover:bg-gray-50"
               >
                 <td className="px-6 py-5 text-sm text-gray-800">
-                  {p.fullName}
+                  <div className="flex items-center gap-2">
+                    <img
+                      src={p.image ?? "/images/default player image.png"}
+                      alt={p.fullName}
+                      className="h-6 w-6 rounded-full object-cover"
+                    />
+                    <span>{p.fullName}</span>
+                  </div>
                 </td>
                 <td className="px-6 py-5 text-sm text-gray-600">
                   {p.teamId ? teamNameById.get(p.teamId) : "-"}

@@ -28,7 +28,12 @@ const LeagueHeader = ({
   return (
     <div className="flex justify-between">
       <div className="flex gap-5">
-        <Image src="/images/logo.png" alt="logo" width={50} height={50} />
+        <Image
+          src="/images/league default logo.png"
+          alt="logo"
+          width={50}
+          height={50}
+        />
 
         <div>
           <h1 className="text-2xl font-bold">{leagueName}</h1>

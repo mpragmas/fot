@@ -98,7 +98,12 @@ const TeamGoalsStatsPage = async ({
         <Link href={backHref}>Back</Link>
       </div>
       <div className="dark:border-dark-2 flex items-center gap-3 border-b py-3">
-        <Image src="/images/logo.png" alt="" width={30} height={30} />
+        <Image
+          src="/images/league default logo.png"
+          alt=""
+          width={30}
+          height={30}
+        />
         <p>{team.league?.name ?? "League"}</p>
         <p>Team stats</p>
       </div>
@@ -174,7 +179,12 @@ const TeamGoalsStatsPage = async ({
           >
             <div className="flex items-center gap-5">
               <p>{pageIndex * take + idx + 1}</p>
-              <Image src="/images/logo.png" alt="" width={50} height={50} />
+              <Image
+                src="/images/default player image.png"
+                alt=""
+                width={50}
+                height={50}
+              />
               <p>{row.playerName}</p>
             </div>
             <p className="pr-2">{row.value}</p>

@@ -1,11 +1,13 @@
 import Badge from "@/app/ui/Badge";
 import React from "react";
 import Link from "next/link";
+import Image from "next/image";
 
 export type LeagueTableDisplayRow = {
   teamId: number;
   rank: number;
   name: string;
+  logo?: string | null;
   pl: number;
   w: number;
   d: number;
@@ -82,10 +84,23 @@ const Table: React.FC<Props> = ({ rows = [], scope, onScopeChange }) => {
             key={t.rank}
             className="group relative flex items-center gap-4 px-2 py-3"
           >
-            <div className="absolute top-0 left-0 h-full w-1 rounded-l-2xl bg-[--color-green]" />
+            {/* <Image
+              src={t.logo ?? "/images/default team logo.png"}
+              alt={t.name}
+              width={6}
+              height={6}
+              className="rounded-full"
+            /> */}
             <div className="text-dark-3 w-6 text-sm">{t.rank}</div>
             <div className="flex flex-1 items-center gap-3">
-              <span className="bg-dark-4 inline-block h-6 w-6 rounded-full" />
+              <Image
+                src={t.logo ?? "/images/default team logo.png"}
+                alt={t.name}
+                width={24}
+                height={32}
+                className="inline-block rounded-full"
+              />
+              {/* <span className="bg-dark-4 inline-block h-6 w-6 rounded-full" /> */}
               <Link
                 href={`/fan/team/${t.teamId}`}
                 className="text-sm font-semibold hover:underline"

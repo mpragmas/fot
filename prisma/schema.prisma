@@ -62,6 +62,18 @@ enum ProposalStatus {
   REJECTED
 }
 
+
+
+enum NewsStatus {
+  DRAFT
+  PUBLISHED
+ 
+}
+
+
+
+
+
 // ------------------------ USERS ------------------------
 model User {
   id                   Int       @id @default(autoincrement())
@@ -307,12 +319,18 @@ model ProposedTransfer {
 }
 
 // ------------------------ NEWS & COMMENTS ------------------------
+
 model News {
-  id          Int       @id @default(autoincrement())
+  id          Int        @id @default(autoincrement())
   title       String
-  content     String
-  author      User      @relation(fields: [authorId], references: [id])
+  slug        String     @unique
+  content     String     @db.Text
+  coverImage  String?
+  status      NewsStatus @default(DRAFT)
+
+  author      User       @relation(fields: [authorId], references: [id])
   authorId    Int
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 }

@@ -10,6 +10,8 @@ export type TeamFixtureSummary = {
   awayTeamId: number;
   homeTeamName: string;
   awayTeamName: string;
+  homeTeamLogo: string;
+  awayTeamLogo: string;
   homeScore: number | null;
   awayScore: number | null;
   status: "UPCOMING" | "LIVE" | "COMPLETED";
@@ -26,8 +28,8 @@ export const getTeamFixturesForSeason = cache(
       },
       orderBy: [{ date: "asc" }, { id: "asc" }],
       include: {
-        homeTeam: { select: { id: true, name: true } },
-        awayTeam: { select: { id: true, name: true } },
+        homeTeam: { select: { id: true, name: true, logo: true } },
+        awayTeam: { select: { id: true, name: true, logo: true } },
         match: {
           select: {
             status: true,
@@ -45,6 +47,8 @@ export const getTeamFixturesForSeason = cache(
       awayTeamId: f.awayTeam.id,
       homeTeamName: f.homeTeam.name,
       awayTeamName: f.awayTeam.name,
+      homeTeamLogo: f.homeTeam.logo ?? DEFAULT_LOGO,
+      awayTeamLogo: f.awayTeam.logo ?? DEFAULT_LOGO,
       homeScore: f.match?.homeScore ?? null,
       awayScore: f.match?.awayScore ?? null,
       status: (f.match?.status as TeamFixtureSummary["status"]) ?? "UPCOMING",
@@ -84,6 +88,8 @@ export const getTeamTopStats = cache(
             select: {
               firstName: true,
               lastName: true,
+              image: true,
+              team: { select: { name: true, logo: true } },
             },
           },
         },
@@ -102,6 +108,8 @@ export const getTeamTopStats = cache(
             select: {
               firstName: true,
               lastName: true,
+              image: true,
+              team: { select: { name: true, logo: true } },
             },
           },
         },
@@ -115,6 +123,8 @@ export const getTeamTopStats = cache(
             select: {
               firstName: true,
               lastName: true,
+              image: true,
+              team: { select: { name: true, logo: true } },
             },
           },
         },
@@ -126,22 +136,22 @@ export const getTeamTopStats = cache(
 
     const topScorers: PlayerStatCardItem[] = topScorersRaw.map((s) => ({
       name: toName(s.player),
-      team: "",
-      teamLogo: DEFAULT_LOGO,
+      team: s.player.team?.name ?? "",
+      teamLogo: s.player.image || s.player.team?.logo || DEFAULT_LOGO,
       value: String(s.goals),
     }));
 
     const topAssists: PlayerStatCardItem[] = topAssistsRaw.map((s) => ({
       name: toName(s.player),
-      team: "",
-      teamLogo: DEFAULT_LOGO,
+      team: s.player.team?.name ?? "",
+      teamLogo: s.player.image || s.player.team?.logo || DEFAULT_LOGO,
       value: String(s.assists),
     }));
 
     const topRated: PlayerStatCardItem[] = topGaRaw.map((s) => ({
       name: toName(s.player),
-      team: "",
-      teamLogo: DEFAULT_LOGO,
+      team: s.player.team?.name ?? "",
+      teamLogo: s.player.image || s.player.team?.logo || DEFAULT_LOGO,
       value: String(s.goals + s.assists),
     }));
 
